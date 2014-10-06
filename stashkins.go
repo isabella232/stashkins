@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 )
 import "github.com/xoom/jenkins"
 
@@ -20,10 +22,20 @@ func init() {
 func main() {
 	jobs, err := jenkins.GetJobs(*jenkinsBaseURL)
 	if err != nil {
-		log.Fatalf("Error: %v\n", err)
+		log.Fatalf("GetJobs Error: %v\n", err)
 	}
 
 	for _, v := range jobs {
-		fmt.Printf("%+v\n", v)
+		//fmt.Printf("%+v\n", v)
+		jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, v.Name)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", v.Name, err)
+		}
+		for _, branch := range jobConfig.SCM.Branches.Branch {
+			if strings.Contains(branch.Name, "feature") && strings.Contains(branch.Name, "*") {
+				fmt.Printf("%s has branch wildcards: %s\n", v.URL, branch.Name)
+			}
+		}
+
 	}
 }
