@@ -29,14 +29,14 @@ func main() {
 			log.Fatalf("GetJobs Error: %v\n", err)
 		}
 
-		for _, v := range jobs {
-			jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, v.Name)
+		for _, job := range jobs {
+			jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", v.Name, err)
+				fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", job.Name, err)
 			}
 			for _, branch := range jobConfig.SCM.Branches.Branch {
 				if strings.Contains(branch.Name, "feature") && strings.Contains(branch.Name, "*") {
-					fmt.Printf("%s has branch wildcards: %s\n", v.URL, branch.Name)
+					fmt.Printf("%s has branch wildcards: %s\n", job.URL, branch.Name)
 				}
 			}
 
@@ -52,7 +52,7 @@ func main() {
 		for _, v := range jobs {
 			_, err := jenkins.GetJobConfig(*jenkinsBaseURL, v.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Non-maven2 job: %s\n", v.Name)
+				fmt.Printf("Non-maven2 job: %s\n", v.Name)
 			}
 		}
 	}
