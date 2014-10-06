@@ -10,11 +10,20 @@ import (
 import "github.com/xoom/jenkins"
 
 var (
-	stashURL                            = flag.String("stash-url", "http://stash.example.com", "Stash Base URL")
-	jenkinsBaseURL                      = flag.String("jenkins-url", "http://jenkins.example.com", "Jenkins Base URL")
+	stashBaseURL   = flag.String("stash-url", "http://stash.example.com:8080", "Stash Base URL")
+	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
+
+	jobTemplateFile  = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
+	jobReport        = flag.Bool("job-report", false, "Show Jenkins/Stash sync state for job.  Requires -job-repository-url.")
+	jobRepositoryURL = flag.String("job-repository-url", "ssh://git@example.com:9999/teamp/code.git", "The Git repository URL for this Jenkins job.")
+
+	stashUserName = flag.String("Stash username", "", "Username for Stash authentication")
+	stashPassword = flag.String("Stash password", "", "Password for Stash authentication")
+
 	listJobsWithoutFeatureBranches      = flag.Bool("jobs-without-feature-branches", false, "List jobs without feature branches")
 	listJobsWithWildcardFeatureBranches = flag.Bool("jobs-with-wildcard-feature-branches", false, "List jobs with wildcard feature branches")
 	listNonMavenJobs                    = flag.Bool("non-maven-jobs", false, "List non-maven jobs")
+	listJobRepositories                 = flag.Bool("job-repositories", false, "List job repositories")
 )
 
 func init() {
@@ -40,20 +49,6 @@ func main() {
 				}
 			}
 
-		}
-	}
-
-	if *listNonMavenJobs {
-		jobs, err := jenkins.GetJobs(*jenkinsBaseURL)
-		if err != nil {
-			log.Fatalf("GetJobs Error: %v\n", err)
-		}
-
-		for _, v := range jobs {
-			_, err := jenkins.GetJobConfig(*jenkinsBaseURL, v.Name)
-			if err != nil {
-				fmt.Printf("Non-maven2 job: %s\n", v.Name)
-			}
 		}
 	}
 }
