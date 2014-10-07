@@ -1,21 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/xoom/jenkins"
 	"github.com/xoom/stash"
 )
 
 type JobTemplate struct {
-	AppName      string // code.git as in ssh://git@example.com:9999/teamp/code.git
-	BranchType   string // feature, as in feature/PLAT-999
-	BranchSuffix string // PLAT-999 as in feature/PLAT-999
-	RepostoryURL string // ssh://git@example.com:9999/teamp/code.git
+	AppName             string // code.git as in ssh://git@example.com:9999/teamp/code.git
+	BranchType          string // feature, as in feature/PLAT-999
+	BranchSuffix        string // PLAT-999 as in feature/PLAT-999
+	RepositoryURL       string // ssh://git@example.com:9999/teamp/code.git
+	NexusRepositoryType string // if branch == master then releases else snapshots
 }
 
 var (
@@ -116,7 +120,53 @@ func main() {
 			fmt.Printf("Missing jobs\n")
 			for _, v := range missingJobs {
 				fmt.Printf("	%+v\n", v)
+				appName := nameFromGitURL(*jobRepositoryURL)
+
+				var nexusType string
+				if v == "master" {
+					nexusType = "releases"
+				} else {
+					nexusType = "snapshots"
+				}
+
+				var branchType string
+				var branchSuffix string
+				if v == "master" || v == "develop" || !strings.Contains(v, "/") {
+					branchType = v
+					branchSuffix = ""
+				} else {
+					branchType = strings.Split(v, "/")[0]
+					branchSuffix = strings.Split(v, "/")[1]
+				}
+				t := JobTemplate{
+					AppName:             appName,
+					BranchType:          branchType,
+					BranchSuffix:        branchSuffix,
+					RepositoryURL:       *jobRepositoryURL,
+					NexusRepositoryType: nexusType,
+				}
+
+				data, err := ioutil.ReadFile(*jobTemplateFile)
+				if err != nil {
+					log.Fatalf("Cannot read job template file %s: %v\n", *jobTemplateFile, err)
+				}
+				tmpl, err := template.New("jobconfig").Parse(string(data))
+				if err != nil {
+					log.Fatalf("Cannot parse job template file %s: %v\n", *jobTemplateFile, err)
+				}
+				result := bytes.NewBufferString("")
+				err = tmpl.Execute(result, t)
+				if err != nil {
+					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
+				}
+				templ := string(result.Bytes())
+				fmt.Printf("%s\n\n", templ)
 			}
 		}
 	}
+}
+
+func nameFromGitURL(url string) string {
+	i := strings.LastIndex(url, "/") + 1
+	return url[i:]
 }
