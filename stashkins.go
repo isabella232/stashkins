@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 )
 import "github.com/xoom/jenkins"
 
@@ -19,11 +18,6 @@ var (
 
 	stashUserName = flag.String("Stash username", "", "Username for Stash authentication")
 	stashPassword = flag.String("Stash password", "", "Password for Stash authentication")
-
-	listJobsWithoutFeatureBranches      = flag.Bool("jobs-without-feature-branches", false, "List jobs without feature branches")
-	listJobsWithWildcardFeatureBranches = flag.Bool("jobs-with-wildcard-feature-branches", false, "List jobs with wildcard feature branches")
-	listNonMavenJobs                    = flag.Bool("non-maven-jobs", false, "List non-maven jobs")
-	listJobRepositories                 = flag.Bool("job-repositories", false, "List job repositories")
 )
 
 func init() {
@@ -31,24 +25,34 @@ func init() {
 }
 
 func main() {
+	allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
+	if err != nil {
+		log.Fatalf("GetJobs Error: %v\n", err)
+	}
 
-	if *listJobsWithWildcardFeatureBranches {
-		jobs, err := jenkins.GetJobs(*jenkinsBaseURL)
-		if err != nil {
-			log.Fatalf("GetJobs Error: %v\n", err)
-		}
-
-		for _, job := range jobs {
+	if *jobReport {
+		log.Printf("Analyzing %s...\n", *jobRepositoryURL)
+		appConfigs := make([]jenkins.JobConfig, 0)
+		for _, job := range allJobs {
 			jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", job.Name, err)
 			}
-			for _, branch := range jobConfig.SCM.Branches.Branch {
-				if strings.Contains(branch.Name, "feature") && strings.Contains(branch.Name, "*") {
-					fmt.Printf("%s has branch wildcards: %s\n", job.URL, branch.Name)
+			for _, remoteCfg := range jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig {
+				fmt.Fprintf(os.Stderr, "checking url %s\n", remoteCfg.URL)
+				if remoteCfg.URL == *jobRepositoryURL {
+					appConfigs = append(appConfigs, jobConfig)
 				}
 			}
-
+		}
+		branches := make([]jenkins.Branch, 0)
+		for _, v := range appConfigs {
+			for _, branch := range v.SCM.Branches.Branch {
+				branches = append(branches, branch)
+			}
+		}
+		for _, v := range branches {
+			fmt.Printf("%s\n", v.Name)
 		}
 	}
 }
