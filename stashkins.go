@@ -42,13 +42,12 @@ func main() {
 		for _, job := range allJobs {
 			jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", job.Name, err)
+				//fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", job.Name, err)
 			}
 			for _, remoteCfg := range jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig {
 				if strings.HasPrefix(remoteCfg.URL, "http") {
 					fmt.Fprintf(os.Stderr, "Found a job Git http URL.  This is not supported: %s\n", remoteCfg.URL)
 				}
-				fmt.Fprintf(os.Stderr, "checking url %s\n", remoteCfg.URL)
 				if remoteCfg.URL == *jobRepositoryURL {
 					appJobConfigs = append(appJobConfigs, jobConfig)
 				}
@@ -70,10 +69,10 @@ func main() {
 			log.Fatalf("Cannot get Stash branches for repository: %s\n", *jobRepositoryURL)
 		}
 
-		fmt.Printf("Stash branches\n")
-		for _, v := range stashBranches {
-			fmt.Printf("	%s\n", v.DisplayID)
-		}
+		//fmt.Printf("Stash branches\n")
+		//for _, v := range stashBranches {
+		//	fmt.Printf("	%s\n", v.DisplayID)
+		//}
 
 		// Find branches Jenkins is building that no longer exist in Stash
 		obsoleteJobs := make([]jenkins.JobConfig, 0)
@@ -91,5 +90,25 @@ func main() {
 			}
 		}
 		fmt.Printf("Obsolete jobs: %+v\n", obsoleteJobs)
+
+		// Find missing jobs
+		missingJobs := make([]string, 0)
+		for branch, _ := range stashBranches {
+			missingJob := true
+			for _, jobConfig := range appJobConfigs {
+				for _, builtBranch := range jobConfig.SCM.Branches.Branch {
+					if strings.HasSuffix(builtBranch.Name, branch) {
+						missingJob = false
+					}
+				}
+			}
+			if missingJob {
+				missingJobs = append(missingJobs, branch)
+			}
+		}
+		fmt.Printf("Missing jobs\n")
+		for _, v := range missingJobs {
+			fmt.Printf("	%+v\n", v)
+		}
 	}
 }
