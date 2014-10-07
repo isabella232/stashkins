@@ -6,11 +6,17 @@ import (
 	"log"
 	"os"
 	"strings"
-)
-import (
+
 	"github.com/xoom/jenkins"
 	"github.com/xoom/stash"
 )
+
+type JobTemplate struct {
+	AppName      string // code.git as in ssh://git@example.com:9999/teamp/code.git
+	BranchType   string // feature, as in feature/PLAT-999
+	BranchSuffix string // PLAT-999 as in feature/PLAT-999
+	RepostoryURL string // ssh://git@example.com:9999/teamp/code.git
+}
 
 var (
 	stashBaseURL   = flag.String("stash-url", "http://stash.example.com:8080", "Stash Base URL")
@@ -68,11 +74,6 @@ func main() {
 		if err != nil {
 			log.Fatalf("Cannot get Stash branches for repository: %s\n", *jobRepositoryURL)
 		}
-
-		//fmt.Printf("Stash branches\n")
-		//for _, v := range stashBranches {
-		//	fmt.Printf("	%s\n", v.DisplayID)
-		//}
 
 		// Find branches Jenkins is building that no longer exist in Stash
 		obsoleteJobs := make([]jenkins.JobConfig, 0)
