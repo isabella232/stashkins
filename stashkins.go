@@ -67,7 +67,7 @@ func main() {
 		// Get Stash branches for this repository.
 		repos, err := stash.GetRepositories(*stashBaseURL)
 		if err != nil {
-			log.Fatalf("Cannot get Stash repositories")
+			log.Fatalf("Cannot get Stash repositories: %v\n", err)
 		}
 		repo, ok := stash.HasRepository(repos, *jobRepositoryURL)
 		if !ok {
