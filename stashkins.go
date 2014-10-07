@@ -89,7 +89,12 @@ func main() {
 				obsoleteJobs = append(obsoleteJobs, jobConfig)
 			}
 		}
-		fmt.Printf("Obsolete jobs: %+v\n", obsoleteJobs)
+		if len(obsoleteJobs) > 0 {
+			fmt.Printf("Obsolete jobs\n", obsoleteJobs)
+			for _, job := range obsoleteJobs {
+				fmt.Printf("	%+v\n", job)
+			}
+		}
 
 		// Find missing jobs
 		missingJobs := make([]string, 0)
@@ -106,9 +111,11 @@ func main() {
 				missingJobs = append(missingJobs, branch)
 			}
 		}
-		fmt.Printf("Missing jobs\n")
-		for _, v := range missingJobs {
-			fmt.Printf("	%+v\n", v)
+		if len(missingJobs) > 0 {
+			fmt.Printf("Missing jobs\n")
+			for _, v := range missingJobs {
+				fmt.Printf("	%+v\n", v)
+			}
 		}
 	}
 }
