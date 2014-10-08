@@ -6,6 +6,6 @@ Jenkins / Stash tooling
 Installation
 ============
 
+     go get github.com/xoom/jenkins
+     go get github.com/xoom/stash
      make
-
-The output binary will be in $GOPATH/bin/
