@@ -170,8 +170,6 @@ func main() {
 
 				// just do one.
 				os.Exit(0)
-				/*
-				 */
 			}
 		}
 	}
