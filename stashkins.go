@@ -121,7 +121,6 @@ func main() {
 
 			// Create Jenkins jobs
 			for _, v := range missingJobs {
-				fmt.Printf("	%+v\n", v)
 				appName := nameFromGitURL(*jobRepositoryURL)
 
 				var nexusType string
@@ -163,13 +162,16 @@ func main() {
 					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				templ := string(result.Bytes())
-				fmt.Printf("%s\n\n", templ)
+				err = jenkins.CreateJob(*jenkinsBaseURL, appName, templ)
+				if err != nil {
+					fmt.Printf("Failed to create job %+v: %+v\n", jobDescr, err)
+				}
+				fmt.Printf("created job %+v\n", jobDescr)
+
+				// just do one.
+				os.Exit(0)
 				/*
-					err = jenkins.CreateJob(*jenkinsBaseURL, appName, templ)
-					if err != nil {
-						fmt.Printf("Failed to create job %+v: %+v\n", jobDescr, err)
-					}
-				*/
+				 */
 			}
 		}
 	}
