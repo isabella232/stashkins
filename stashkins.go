@@ -18,19 +18,18 @@ import (
 type JobTemplate struct {
 	JobName             string // code in ssh://git@example.com:9999/teamp/code.git
 	Description         string // mashup of repository URL and branch name
-	BranchType          string // feature, as in feature/PROJ-999
-	BranchSuffix        string // PROJ-999 as in feature/PROJ-999
+	BranchName          string // feature/PROJ-999, as in feature/PROJ-999
 	RepositoryURL       string // ssh://git@example.com:9999/teamp/code.git
 	NexusRepositoryType string // if branch == master then releases else snapshots
 }
 
 var (
-	stashBaseURL   = flag.String("stash-url", "http://stash.example.com:8080", "Stash Base URL")
+	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
 	jobTemplateFile  = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
 	jobReport        = flag.Bool("job-report", false, "Show Jenkins/Stash sync state for job.  Requires -job-repository-url.")
-	jobRepositoryURL = flag.String("job-repository-url", "ssh://git@example.com:9999/teamp/code.git", "The Git repository URL for this Jenkins job.")
+	jobRepositoryURL = flag.String("job-repository-url", "ssh://git@example.com:9999/teamp/code.git", "The Git repository URL referenced by the Jenkins jobs.")
 
 	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
 	stashPassword = flag.String("stash-password", "", "Password for Stash authentication")
@@ -97,6 +96,7 @@ func main() {
 			}
 		}
 		if len(obsoleteJobs) > 0 {
+			fmt.Printf("Number of obsolete jobs: %d\n", len(obsoleteJobs))
 			for _, job := range obsoleteJobs {
 				if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
 					fmt.Printf("Error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
@@ -124,7 +124,7 @@ func main() {
 			}
 		}
 		if len(missingJobs) > 0 {
-			fmt.Printf("Missing jobs\n")
+			fmt.Printf("Number of missing jobs: %d\n", len(missingJobs))
 
 			// Create Jenkins jobs
 			for _, branch := range missingJobs {
@@ -141,15 +141,13 @@ func main() {
 					branchType = branch
 					branchSuffix = ""
 				} else {
-					branchType = strings.Split(branch, "/")[0]
-					branchSuffix = strings.Split(branch, "/")[1]
+					branchType, branchSuffix = suffixer(branch)
 				}
 
 				jobDescr := JobTemplate{
-					JobName:             repo.Slug + "-continuous-" + branchType + "-" + branchSuffix,
+					JobName:             repo.Slug + "-continuous-" + branchType + branchSuffix,
 					Description:         "This is a continuous build for " + repo.Slug + ", branch " + branch,
-					BranchType:          branchType,
-					BranchSuffix:        branchSuffix,
+					BranchName:          branch,
 					RepositoryURL:       *jobRepositoryURL,
 					NexusRepositoryType: nexusType,
 				}
@@ -172,11 +170,24 @@ func main() {
 				if err != nil {
 					fmt.Printf("Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 				}
-				fmt.Printf("\ncreated job %+v\n", jobDescr)
+				fmt.Printf("\n	created job %+v\n", jobDescr)
 
 				// todo remove this when we want to do more than one
 				os.Exit(0)
 			}
 		}
 	}
+}
+
+func suffixer(branch string) (string, string) {
+	s := strings.Split(branch, "/")
+	p1 := s[0]
+	var p2 string
+	if len(s) == 2 {
+		p2 = s[1]
+	} else {
+		p2 = branch[strings.Index(branch, "/")+1:]
+		p2 = strings.Replace(p2, "/", "-", -1)
+	}
+	return p1, "-" + p2
 }
