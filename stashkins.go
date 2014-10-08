@@ -16,6 +16,7 @@ import (
 
 // JobTemplate is used to populate a template XML Jenkins job config file with appropriate values for prospective new jobs
 type JobTemplate struct {
+	JobName             string // code in ssh://git@example.com:9999/teamp/code.git
 	Description         string // mashup of repository URL and branch name
 	BranchType          string // feature, as in feature/PROJ-999
 	BranchSuffix        string // PROJ-999 as in feature/PROJ-999
@@ -102,6 +103,8 @@ func main() {
 				} else {
 					fmt.Printf("Deleting obsolete job %+v\n", job.JobName)
 				}
+				// todo remove this when we want to delete more than just one
+				break
 			}
 		}
 
@@ -143,13 +146,13 @@ func main() {
 				}
 
 				jobDescr := JobTemplate{
+					JobName:             repo.Slug + "-continuous-" + branchType + "-" + branchSuffix,
 					Description:         "This is a continuous build for " + repo.Slug + ", branch " + branch,
 					BranchType:          branchType,
 					BranchSuffix:        branchSuffix,
 					RepositoryURL:       *jobRepositoryURL,
 					NexusRepositoryType: nexusType,
 				}
-				jobName := repo.Slug + "-continuous-" + branchType + "-" + branchSuffix
 
 				data, err := ioutil.ReadFile(*jobTemplateFile)
 				if err != nil {
@@ -165,13 +168,13 @@ func main() {
 					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				templ := string(result.Bytes())
-				err = jenkins.CreateJob(*jenkinsBaseURL, jobName, templ)
+				err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templ)
 				if err != nil {
 					fmt.Printf("Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 				}
 				fmt.Printf("\ncreated job %+v\n", jobDescr)
 
-				// just do one.
+				// todo remove this when we want to do more than one
 				os.Exit(0)
 			}
 		}
