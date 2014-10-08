@@ -14,10 +14,11 @@ import (
 	"github.com/xoom/stash"
 )
 
+// JobTemplate is used to populate a template XML Jenkins job config file with appropriate values for prospective new jobs
 type JobTemplate struct {
-	AppName             string // code.git as in ssh://git@example.com:9999/teamp/code.git
-	BranchType          string // feature, as in feature/PLAT-999
-	BranchSuffix        string // PLAT-999 as in feature/PLAT-999
+	Description         string // mashup of repository URL and branch name
+	BranchType          string // feature, as in feature/PROJ-999
+	BranchSuffix        string // PROJ-999 as in feature/PROJ-999
 	RepositoryURL       string // ssh://git@example.com:9999/teamp/code.git
 	NexusRepositoryType string // if branch == master then releases else snapshots
 }
@@ -45,6 +46,16 @@ func main() {
 	}
 
 	if *jobReport {
+		// Get Stash branches for this repository.
+		repos, err := stash.GetRepositories(*stashBaseURL)
+		if err != nil {
+			log.Fatalf("Cannot get Stash repositories: %v\n", err)
+		}
+		repo, ok := stash.HasRepository(repos, *jobRepositoryURL)
+		if !ok {
+			log.Fatalf("Repository not found in Stash: %s\n", *jobRepositoryURL)
+		}
+
 		fmt.Fprintf(os.Stderr, "Analyzing %s...\n", *jobRepositoryURL)
 
 		// Jenkins jobs which build against a branch under the Git URL
@@ -62,16 +73,6 @@ func main() {
 					appJobConfigs = append(appJobConfigs, jobConfig)
 				}
 			}
-		}
-
-		// Get Stash branches for this repository.
-		repos, err := stash.GetRepositories(*stashBaseURL)
-		if err != nil {
-			log.Fatalf("Cannot get Stash repositories: %v\n", err)
-		}
-		repo, ok := stash.HasRepository(repos, *jobRepositoryURL)
-		if !ok {
-			log.Fatalf("Unknown repository: %s\n", *jobRepositoryURL) // delete all entries of appJobConfigs - there is no repo here?
 		}
 
 		stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
@@ -95,13 +96,16 @@ func main() {
 			}
 		}
 		if len(obsoleteJobs) > 0 {
-			fmt.Printf("Obsolete jobs\n", obsoleteJobs)
 			for _, job := range obsoleteJobs {
-				fmt.Printf("	%+v\n", job)
+				if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
+					fmt.Printf("Error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
+				} else {
+					fmt.Printf("Deleting obsolete job %+v\n", job.JobName)
+				}
 			}
 		}
 
-		// Find missing jobs
+		// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.
 		missingJobs := make([]string, 0)
 		for branch, _ := range stashBranches {
 			missingJob := true
@@ -120,11 +124,9 @@ func main() {
 			fmt.Printf("Missing jobs\n")
 
 			// Create Jenkins jobs
-			for _, v := range missingJobs {
-				appName := nameFromGitURL(*jobRepositoryURL)
-
+			for _, branch := range missingJobs {
 				var nexusType string
-				if v == "master" {
+				if branch == "master" {
 					nexusType = "releases"
 				} else {
 					nexusType = "snapshots"
@@ -132,21 +134,22 @@ func main() {
 
 				var branchType string
 				var branchSuffix string
-				if v == "master" || v == "develop" || !strings.Contains(v, "/") {
-					branchType = v
+				if branch == "master" || branch == "develop" || !strings.Contains(branch, "/") {
+					branchType = branch
 					branchSuffix = ""
 				} else {
-					branchType = strings.Split(v, "/")[0]
-					branchSuffix = strings.Split(v, "/")[1]
+					branchType = strings.Split(branch, "/")[0]
+					branchSuffix = strings.Split(branch, "/")[1]
 				}
 
 				jobDescr := JobTemplate{
-					AppName:             appName,
+					Description:         "This is a continuous build for " + repo.Slug + ", branch " + branch,
 					BranchType:          branchType,
 					BranchSuffix:        branchSuffix,
 					RepositoryURL:       *jobRepositoryURL,
 					NexusRepositoryType: nexusType,
 				}
+				jobName := repo.Slug + "-continuous-" + branchType + "-" + branchSuffix
 
 				data, err := ioutil.ReadFile(*jobTemplateFile)
 				if err != nil {
@@ -162,20 +165,15 @@ func main() {
 					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				templ := string(result.Bytes())
-				err = jenkins.CreateJob(*jenkinsBaseURL, appName, templ)
+				err = jenkins.CreateJob(*jenkinsBaseURL, jobName, templ)
 				if err != nil {
-					fmt.Printf("Failed to create job %+v: %+v\n", jobDescr, err)
+					fmt.Printf("Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 				}
-				fmt.Printf("created job %+v\n", jobDescr)
+				fmt.Printf("\ncreated job %+v\n", jobDescr)
 
 				// just do one.
 				os.Exit(0)
 			}
 		}
 	}
-}
-
-func nameFromGitURL(url string) string {
-	i := strings.LastIndex(url, "/") + 1
-	return url[i:]
 }
