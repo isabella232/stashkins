@@ -118,6 +118,8 @@ func main() {
 		}
 		if len(missingJobs) > 0 {
 			fmt.Printf("Missing jobs\n")
+
+			// Create Jenkins jobs
 			for _, v := range missingJobs {
 				fmt.Printf("	%+v\n", v)
 				appName := nameFromGitURL(*jobRepositoryURL)
@@ -138,7 +140,8 @@ func main() {
 					branchType = strings.Split(v, "/")[0]
 					branchSuffix = strings.Split(v, "/")[1]
 				}
-				t := JobTemplate{
+
+				jobDescr := JobTemplate{
 					AppName:             appName,
 					BranchType:          branchType,
 					BranchSuffix:        branchSuffix,
@@ -155,12 +158,18 @@ func main() {
 					log.Fatalf("Cannot parse job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				result := bytes.NewBufferString("")
-				err = tmpl.Execute(result, t)
+				err = tmpl.Execute(result, jobDescr)
 				if err != nil {
 					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				templ := string(result.Bytes())
 				fmt.Printf("%s\n\n", templ)
+				/*
+					err = jenkins.CreateJob(*jenkinsBaseURL, appName, templ)
+					if err != nil {
+						fmt.Printf("Failed to create job %+v: %+v\n", jobDescr, err)
+					}
+				*/
 			}
 		}
 	}
