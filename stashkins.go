@@ -28,7 +28,7 @@ var (
 	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
 	jobTemplateFile  = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
-	jobReport        = flag.Bool("job-report", false, "Show Jenkins/Stash sync state for job.  Requires -job-repository-url.")
+	jobSync          = flag.Bool("job-sync", false, "Sync Jenkins state against Stash for a given Stash repository.  Requires -job-repository-url.")
 	jobRepositoryURL = flag.String("job-repository-url", "ssh://git@example.com:9999/teamp/code.git", "The Git repository URL referenced by the Jenkins jobs.")
 
 	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
@@ -40,7 +40,7 @@ func init() {
 }
 
 func main() {
-	if *jobReport {
+	if *jobSync {
 		// Get Stash repositoies.
 		repos, err := stash.GetRepositories(*stashBaseURL)
 		if err != nil {
