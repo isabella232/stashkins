@@ -103,8 +103,6 @@ func main() {
 				} else {
 					fmt.Fprintf(os.Stderr, "Deleting obsolete job %+v\n", job.JobName)
 				}
-				// todo remove this when we want to delete more than just one
-				//break
 			}
 		}
 
@@ -174,9 +172,6 @@ func main() {
 					fmt.Fprintf(os.Stderr, "Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 				}
 				fmt.Fprintf(os.Stderr, "\n	created job %+v\n", jobDescr)
-
-				// todo remove this when we want to do more than one
-				//os.Exit(0)
 			}
 		}
 	}
