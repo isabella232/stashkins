@@ -32,3 +32,6 @@ Usage
        -stash-rest-base-url="http://stash.example.com:8080": Stash REST Base URL
        -stash-username="": Username for Stash authentication
 
+A sample Jenkins job template is provided in sample-job-template.xml.
+It will like have to be modified for your needs, as will the
+JobTemplate struct in stashkins.go that populates it.
