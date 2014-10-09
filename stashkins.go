@@ -152,6 +152,7 @@ func main() {
 					NexusRepositoryType: nexusType,
 				}
 
+				// Prepare the job template
 				data, err := ioutil.ReadFile(*jobTemplateFile)
 				if err != nil {
 					log.Fatalf("Cannot read job template file %s: %v\n", *jobTemplateFile, err)
@@ -166,6 +167,8 @@ func main() {
 					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				templateString := string(result.Bytes())
+
+				// Create the job
 				err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templateString)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
@@ -181,13 +184,13 @@ func main() {
 
 func suffixer(branch string) (string, string) {
 	s := strings.Split(branch, "/")
-	p1 := s[0]
-	var p2 string
+	prefix := s[0]
+	var suffix string
 	if len(s) == 2 {
-		p2 = s[1]
+		suffix = s[1]
 	} else {
-		p2 = branch[strings.Index(branch, "/")+1:]
-		p2 = strings.Replace(p2, "/", "-", -1)
+		suffix = branch[strings.Index(branch, "/")+1:]
+		suffix = strings.Replace(suffix, "/", "-", -1)
 	}
-	return p1, "-" + p2
+	return prefix, "-" + suffix
 }
