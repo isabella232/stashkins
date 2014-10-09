@@ -96,12 +96,12 @@ func main() {
 			}
 		}
 		if len(obsoleteJobs) > 0 {
-			fmt.Printf("Number of obsolete jobs: %d\n", len(obsoleteJobs))
+			fmt.Fprintf(os.Stderr, "Number of obsolete jobs: %d\n", len(obsoleteJobs))
 			for _, job := range obsoleteJobs {
 				if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
-					fmt.Printf("Error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
+					fmt.Fprintf(os.Stderr, "Error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
 				} else {
-					fmt.Printf("Deleting obsolete job %+v\n", job.JobName)
+					fmt.Fprintf(os.Stderr, "Deleting obsolete job %+v\n", job.JobName)
 				}
 				// todo remove this when we want to delete more than just one
 				break
@@ -124,7 +124,7 @@ func main() {
 			}
 		}
 		if len(missingJobs) > 0 {
-			fmt.Printf("Number of missing jobs: %d\n", len(missingJobs))
+			fmt.Fprintf(os.Stderr, "Number of missing jobs: %d\n", len(missingJobs))
 
 			// Create Jenkins jobs
 			for _, branch := range missingJobs {
@@ -156,21 +156,21 @@ func main() {
 				if err != nil {
 					log.Fatalf("Cannot read job template file %s: %v\n", *jobTemplateFile, err)
 				}
-				tmpl, err := template.New("jobconfig").Parse(string(data))
+				jobTemplate, err := template.New("jobconfig").Parse(string(data))
 				if err != nil {
 					log.Fatalf("Cannot parse job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				result := bytes.NewBufferString("")
-				err = tmpl.Execute(result, jobDescr)
+				err = jobTemplate.Execute(result, jobDescr)
 				if err != nil {
 					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
-				templ := string(result.Bytes())
-				err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templ)
+				templateString := string(result.Bytes())
+				err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templateString)
 				if err != nil {
-					fmt.Printf("Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
+					fmt.Fprintf(os.Stderr, "Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 				}
-				fmt.Printf("\n	created job %+v\n", jobDescr)
+				fmt.Fprintf(os.Stderr, "\n	created job %+v\n", jobDescr)
 
 				// todo remove this when we want to do more than one
 				os.Exit(0)
