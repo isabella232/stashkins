@@ -40,13 +40,8 @@ func init() {
 }
 
 func main() {
-	allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
-	if err != nil {
-		log.Fatalf("GetJobs Error: %v\n", err)
-	}
-
 	if *jobReport {
-		// Get Stash branches for this repository.
+		// Get Stash repositoies.
 		repos, err := stash.GetRepositories(*stashBaseURL)
 		if err != nil {
 			log.Fatalf("Cannot get Stash repositories: %v\n", err)
@@ -57,6 +52,11 @@ func main() {
 		}
 
 		fmt.Fprintf(os.Stderr, "Analyzing %s...\n", *jobRepositoryURL)
+
+		allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
+		if err != nil {
+			log.Fatalf("GetJobs Error: %v\n", err)
+		}
 
 		// Jenkins jobs which build against a branch under the Git URL
 		appJobConfigs := make([]jenkins.JobConfig, 0)
