@@ -41,21 +41,21 @@ func init() {
 
 func main() {
 	if *jobSync {
-		// Get Stash repositoies.
+		// Get Stash repositories.
 		repos, err := stash.GetRepositories(*stashBaseURL)
 		if err != nil {
-			log.Fatalf("Cannot get Stash repositories: %v\n", err)
+			log.Fatalf("stash.GetRepositories error: %v\n", err)
 		}
 		repo, ok := stash.HasRepository(repos, *jobRepositoryURL)
 		if !ok {
 			log.Fatalf("Repository not found in Stash: %s\n", *jobRepositoryURL)
 		}
 
-		fmt.Fprintf(os.Stderr, "Analyzing %s...\n", *jobRepositoryURL)
+		fmt.Fprintf(os.Stderr, "Analyzing repository %s...\n", *jobRepositoryURL)
 
 		allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
 		if err != nil {
-			log.Fatalf("GetJobs Error: %v\n", err)
+			log.Fatalf("jenkins.GetJobs Error: %v\n", err)
 		}
 
 		// Jenkins jobs which build against a branch under the Git URL
@@ -63,7 +63,8 @@ func main() {
 		for _, job := range allJobs {
 			jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
 			if err != nil {
-				//fmt.Fprintf(os.Stderr, "%s: %v, skipping...\n", job.Name, err)
+				// This probably means the job config did not conform to the backing XML model we used.  Not a maven job.
+				fmt.Fprintf(os.Stderr, "jenkins.GetJobConfig error for job %s: %v, skipping...\n", job.Name, err)
 			}
 			for _, remoteCfg := range jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig {
 				if strings.HasPrefix(remoteCfg.URL, "http") {
@@ -77,7 +78,7 @@ func main() {
 
 		stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
 		if err != nil {
-			log.Fatalf("Cannot get Stash branches for repository: %s\n", *jobRepositoryURL)
+			log.Fatalf("stash.GetBranches cannot get branches for repository: %s\n", *jobRepositoryURL)
 		}
 
 		// Find branches Jenkins is building that no longer exist in Stash
@@ -99,7 +100,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Number of obsolete jobs: %d\n", len(obsoleteJobs))
 			for _, job := range obsoleteJobs {
 				if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
-					fmt.Fprintf(os.Stderr, "Error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
+					fmt.Fprintf(os.Stderr, "jenkins.DeleteJob error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
 				} else {
 					fmt.Fprintf(os.Stderr, "Deleting obsolete job %+v\n", job.JobName)
 				}

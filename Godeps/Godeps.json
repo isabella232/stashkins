@@ -1,0 +1,14 @@
+{
+	"ImportPath": "github.com/xoom/stashkins",
+	"GoVersion": "go1.3",
+	"Deps": [
+		{
+			"ImportPath": "github.com/xoom/jenkins",
+			"Rev": "19af8350723847d3d8fcae7f22e792d577bd20c1"
+		},
+		{
+			"ImportPath": "github.com/xoom/stash",
+			"Rev": "df24d171c94fa2649163586c8f7b8557eea74fc9"
+		}
+	]
+}
