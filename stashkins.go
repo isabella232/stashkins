@@ -78,7 +78,7 @@ func main() {
 
 		stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
 		if err != nil {
-			log.Fatalf("stash.GetBranches cannot get branches for repository: %s\n", *jobRepositoryURL)
+			log.Fatalf("stash.GetBranches cannot get branches for repository %s: %v\n", *jobRepositoryURL, err)
 		}
 
 		// Find branches Jenkins is building that no longer exist in Stash
