@@ -33,6 +33,11 @@ var (
 
 	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
 	stashPassword = flag.String("stash-password", "", "Password for Stash authentication")
+
+	version = flag.Bool("version", false, "Print git commit from which stashkins was built")
+
+	// set with LD_FLAGS during build
+	commit string
 )
 
 func init() {
@@ -40,6 +45,10 @@ func init() {
 }
 
 func main() {
+	if *version {
+		fmt.Printf("Build commit ID: %s\n", commit)
+		os.Exit(0)
+	}
 	if *jobSync {
 		// Get Stash repositories.
 		repos, err := stash.GetRepositories(*stashBaseURL)

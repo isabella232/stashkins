@@ -1,10 +1,12 @@
 # This build uses godep, which manages which commits of our dependencies we build against.
 # https://github.com/tools/godep
 
+LD_FLAGS := -X main.commit $(shell git rev-parse --short HEAD)
+
 all: tools deps
 	go clean
 	godep go test
-	godep go build
+	godep go build -ldflags "$(LD_FLAGS)"
 	godep go install
 
 deps:
