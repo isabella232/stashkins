@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -45,8 +44,8 @@ func init() {
 }
 
 func main() {
+	log.Printf("Stashkins build commit ID: %s\n", commit)
 	if *version {
-		fmt.Printf("Build commit ID: %s\n", commit)
 		os.Exit(0)
 	}
 	if *jobSync {
@@ -57,14 +56,14 @@ func main() {
 		}
 		repo, ok := stash.HasRepository(repos, *jobRepositoryURL)
 		if !ok {
-			log.Fatalf("Repository not found in Stash: %s\n", *jobRepositoryURL)
+			log.Fatalf("stashkins.main repository not found in Stash: %s\n", *jobRepositoryURL)
 		}
 
-		fmt.Fprintf(os.Stderr, "Analyzing repository %s...\n", *jobRepositoryURL)
+		log.Printf("Analyzing repository %s...\n", *jobRepositoryURL)
 
 		allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
 		if err != nil {
-			log.Fatalf("jenkins.GetJobs Error: %v\n", err)
+			log.Fatalf("stashkins.main get jobs error: %v\n", err)
 		}
 
 		// Jenkins jobs which build against a branch under the Git URL
@@ -73,11 +72,11 @@ func main() {
 			jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
 			if err != nil {
 				// This probably means the job config did not conform to the backing XML model we used.  Not a maven job.
-				fmt.Fprintf(os.Stderr, "jenkins.GetJobConfig error for job %s: %v, skipping...\n", job.Name, err)
+				log.Printf("stashkins.main Jenkins GetJobConfig error for job %s: %v, skipping...\n", job.Name, err)
 			}
 			for _, remoteCfg := range jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig {
 				if strings.HasPrefix(remoteCfg.URL, "http") {
-					fmt.Fprintf(os.Stderr, "Found a job Git http URL.  This is not supported: %s\n", remoteCfg.URL)
+					log.Printf("Found a job Git http URL.  This is not supported: %s\n", remoteCfg.URL)
 				}
 				if remoteCfg.URL == *jobRepositoryURL {
 					appJobConfigs = append(appJobConfigs, jobConfig)
@@ -87,7 +86,7 @@ func main() {
 
 		stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
 		if err != nil {
-			log.Fatalf("stash.GetBranches cannot get branches for repository %s: %v\n", *jobRepositoryURL, err)
+			log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", *jobRepositoryURL, err)
 		}
 
 		// Find branches Jenkins is building that no longer exist in Stash
@@ -106,12 +105,12 @@ func main() {
 			}
 		}
 		if len(obsoleteJobs) > 0 {
-			fmt.Fprintf(os.Stderr, "Number of obsolete jobs: %d\n", len(obsoleteJobs))
+			log.Printf("Number of obsolete jobs: %d\n", len(obsoleteJobs))
 			for _, job := range obsoleteJobs {
 				if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
-					fmt.Fprintf(os.Stderr, "jenkins.DeleteJob error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
+					log.Printf("stashkins.main error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
 				} else {
-					fmt.Fprintf(os.Stderr, "Deleting obsolete job %+v\n", job.JobName)
+					log.Printf("Deleting obsolete job %+v\n", job.JobName)
 				}
 			}
 		}
@@ -132,7 +131,7 @@ func main() {
 			}
 		}
 		if len(missingJobs) > 0 {
-			fmt.Fprintf(os.Stderr, "Number of missing jobs: %d\n", len(missingJobs))
+			log.Printf("Number of missing jobs: %d\n", len(missingJobs))
 
 			// Create Jenkins jobs
 			for _, branch := range missingJobs {
@@ -163,25 +162,26 @@ func main() {
 				// Prepare the job template
 				data, err := ioutil.ReadFile(*jobTemplateFile)
 				if err != nil {
-					log.Fatalf("Cannot read job template file %s: %v\n", *jobTemplateFile, err)
+					log.Fatalf("stashkins.main cannot read job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				jobTemplate, err := template.New("jobconfig").Parse(string(data))
 				if err != nil {
-					log.Fatalf("Cannot parse job template file %s: %v\n", *jobTemplateFile, err)
+					log.Fatalf("stashkins.main cannot parse job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				result := bytes.NewBufferString("")
 				err = jobTemplate.Execute(result, jobDescr)
 				if err != nil {
-					log.Fatalf("Cannot execute job template file %s: %v\n", *jobTemplateFile, err)
+					log.Fatalf("stashkins.main cannot execute job template file %s: %v\n", *jobTemplateFile, err)
 				}
 				templateString := string(result.Bytes())
 
 				// Create the job
 				err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templateString)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
+					log.Printf("stashkins.main failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
+				} else {
+					log.Printf("\n	created job %+v\n", jobDescr)
 				}
-				fmt.Fprintf(os.Stderr, "\n	created job %+v\n", jobDescr)
 			}
 		}
 	}
