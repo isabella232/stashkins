@@ -24,6 +24,7 @@ tools:
 
 clean: 
 	go clean
+	rm *.deb
 
 package:
-	echo fpm
+	which fpm && fpm -s dir -t deb -v $(VERSION) -n stashkins -a amd64 -m"Mark Petrovic <mark.petrovic@xoom.com>" --prefix /usr/local/bin stashkins-linux-amd64
