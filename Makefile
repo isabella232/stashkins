@@ -1,13 +1,19 @@
-# This build uses godep, which manages which commits of our dependencies we build against.
-# https://github.com/tools/godep
+NAME := stashkins
+ARCH := amd64
+VERSION := 1.0
+DATE := $(shell date)
+COMMIT_ID := $(shell git rev-parse --short HEAD)
+SDK_INFO := $(shell go version)
+LD_FLAGS := -X main.version $(VERSION) -X main.commit $(COMMIT_ID) -X main.buildTime '$(DATE)' -X main.sdkInfo '$(SDK_INFO)'
 
-LD_FLAGS := -X main.commit $(shell git rev-parse --short HEAD)
+all: clean binaries package
 
-all: deps
-	go clean
+test:
 	godep go test
-	godep go build -ldflags "$(LD_FLAGS)"
-	godep go install
+
+binaries: tools deps test 
+	GOOS=darwin GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-darwin-$(ARCH)
+	GOOS=linux GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-linux-$(ARCH)
 
 deps:
 	go get -v -u github.com/xoom/stash
@@ -15,3 +21,9 @@ deps:
 
 tools:
 	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep
+
+clean: 
+	go clean
+
+package:
+	echo fpm
