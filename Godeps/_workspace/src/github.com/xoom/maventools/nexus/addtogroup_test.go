@@ -76,6 +76,18 @@ func TestAddToGroup(t *testing.T) {
 		if !repoIsInGroup("somerepo", repogroup) {
 			t.Fatalf("Not expecting true but got false\n")
 		}
+
+		repository := repogroup.Data.Repositories[0]
+		if repository.Name != "plat.trnk.trnk679" {
+			t.Fatalf("Want plat.trnk.trnk679 but got %s\n", repository.Name)
+		}
+		if repository.ID != "plat.trnk.trnk679" {
+			t.Fatalf("Want plat.trnk.trnk679 but got %s\n", repository.ID)
+		}
+		if repository.ResourceURI != "http://localhost:8081/nexus/service/local/repo_groups/snapshotgroup/plat.trnk.trnk679" {
+			t.Fatalf("Want http://localhost:8081/nexus/service/local/repo_groups/snapshotgroup/plat.trnk.trnk679 but got %s\n", repository.ResourceURI)
+		}
+
 		w.WriteHeader(200)
 
 	}))

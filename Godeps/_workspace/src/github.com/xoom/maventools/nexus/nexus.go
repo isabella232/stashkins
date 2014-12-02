@@ -3,27 +3,30 @@ package nexus
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 )
 
 type (
-	// The type posted in JSON format to create a new Nexus repository.
+	// The type posted in XML format to create a new Nexus repository.
 	createrepo struct {
-		Data CreateRepoData `json:"data"`
+		XMLName xml.Name       `xml:"repository"`
+		Data    CreateRepoData `xml:"data"`
 	}
 
 	CreateRepoData struct {
-		ContentResourceURI string `json:"contentResourceURI"`
-		Id                 string `json:"id"`
-		Name               string `json:"name"`
-		Provider           string `json:"provider"`
-		ProviderRole       string `json:"providerRole"`
-		Format             string `json:"format"`
-		RepoType           string `json:"repoType"`
-		RepoPolicy         string `json:"repoPolicy"`
-		Exposed            bool   `json:"exposed"`
+		XMLName            xml.Name `xml:"data"`
+		ContentResourceURI string   `xml:"contentResourceURI"`
+		Id                 string   `xml:"id"`
+		Name               string   `xml:"name"`
+		Provider           string   `xml:"provider"`
+		ProviderRole       string   `xml:"providerRole"`
+		Format             string   `xml:"format"`
+		RepoType           string   `xml:"repoType"`
+		RepoPolicy         string   `xml:"repoPolicy"`
+		Exposed            bool     `xml:"exposed"`
 	}
 
 	// The type retrieved or put to read or mutate a repository group.
@@ -46,7 +49,7 @@ type (
 	repository struct {
 		Name        string `json:"name"`
 		ID          string `json:"id"`
-		ResourceURI string `json:resourceURI"`
+		ResourceURI string `json:"resourceURI"`
 	}
 
 	// A Nexus client
@@ -107,7 +110,7 @@ func (client *Client) CreateRepository(repositoryID string) error {
 			Exposed:            true,
 		}}
 
-	data, err := json.Marshal(&repo)
+	data, err := xml.Marshal(&repo)
 	if err != nil {
 		return err
 	}
@@ -117,7 +120,7 @@ func (client *Client) CreateRepository(repositoryID string) error {
 		return err
 	}
 	req.SetBasicAuth(client.username, client.password)
-	req.Header.Add("Content-type", "application/json")
+	req.Header.Add("Content-type", "application/xml")
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := client.httpClient.Do(req)

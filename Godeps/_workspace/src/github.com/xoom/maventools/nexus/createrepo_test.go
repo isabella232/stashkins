@@ -1,7 +1,7 @@
 package nexus
 
 import (
-	"encoding/json"
+	"encoding/xml"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -20,8 +20,8 @@ func TestCreateRepo(t *testing.T) {
 		if r.Header.Get("Accept") != "application/json" {
 			t.Fatalf("Wanted application/json but got %s for Accept header", r.Header.Get("Accept"))
 		}
-		if r.Header.Get("Content-type") != "application/json" {
-			t.Fatalf("Wanted application/json but got %s for Content-type header", r.Header.Get("Content-type"))
+		if r.Header.Get("Content-type") != "application/xml" {
+			t.Fatalf("Wanted application/xml but got %s for Content-type header", r.Header.Get("Content-type"))
 		}
 
 		authHeader := r.Header.Get("Authorization")
@@ -39,7 +39,7 @@ func TestCreateRepo(t *testing.T) {
 		}
 
 		var repo createrepo
-		err = json.Unmarshal(b, &repo)
+		err = xml.Unmarshal(b, &repo)
 		if err != nil {
 			t.Fatalf("Not expecting an error but got one: %v\n", err)
 		}

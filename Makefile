@@ -6,7 +6,7 @@ COMMIT_ID := $(shell git rev-parse --short HEAD)
 SDK_INFO := $(shell go version)
 LD_FLAGS := -X main.version $(VERSION) -X main.commit $(COMMIT_ID) -X main.buildTime '$(DATE)' -X main.sdkInfo '$(SDK_INFO)'
 
-all: clean binaries package
+all: clean binaries 
 
 test:
 	godep go test
@@ -16,8 +16,9 @@ binaries: tools deps test
 	GOOS=linux GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-linux-$(ARCH)
 
 deps:
-	go get -v -u github.com/xoom/stash
-	go get -v -u github.com/xoom/jenkins
+	go get -v github.com/xoom/stash
+	go get -v github.com/xoom/jenkins
+	go get -v github.com/xoom/maventools/nexus
 
 tools:
 	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep
