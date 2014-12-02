@@ -35,12 +35,11 @@ var (
 	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
 	stashPassword = flag.String("stash-password", "", "Password for Stash authentication")
 
-	// Todo these should all be renamed to mavenRepoManagerBaseURL, mavenRepoManagerUsername, etc, to allow for Artifactory
-	nexusBaseURL           = flag.String("nexus-base-url", "http://localhost:8081/nexus", "Sonatype Nexus Base URL")
-	nexusUserName          = flag.String("nexus-username", "", "Username for Sonatype Nexus authentication")
-	nexusPassword          = flag.String("nexus-password", "", "Password for Sonatype Nexus authentication")
-	nexusRepositoryGroupID = flag.String("nexus-repository-groupID", "", "Repository groupID in which to create new per-branch repositories")
-	doNexus                = flag.Bool("do-nexus", false, "Whether to create, delete and update Nexus Maven repositories as per-branch operations")
+	mavenBaseURL           = flag.String("maven-repo-base-url", "http://localhost:8081/nexus", "Maven repository management Base URL")
+	mavenUsername          = flag.String("maven-repo-username", "", "Username for Maven repository management")
+	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management")
+	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to create new per-branch repositories")
+	doMavenRepoManagement  = flag.Bool("do-maven-repo", false, "Whether to create, delete and update Maven repositories as per-branch operations")
 
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
 
@@ -61,12 +60,11 @@ func main() {
 	}
 	if *jobSync {
 
-		if *doNexus && (*nexusUserName == "" || *nexusPassword == "" || *nexusRepositoryGroupID == "") {
+		if *doMavenRepoManagement && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
 			log.Fatalf("Nexus username, password, and repository group are required\n")
 		}
 
-		nexusClient := nexus.NewClient(*nexusBaseURL, *nexusUserName, *nexusPassword)
-		log.Printf("doNexus: %v\n", *doNexus)
+		mavenRepositoryClient := nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 
 		// Get Stash repositories.
 		repos, err := stash.GetRepositories(*stashBaseURL)
@@ -133,18 +131,18 @@ func main() {
 				}
 
 				// Nexus
-				if *doNexus {
+				if *doMavenRepoManagement {
 					for _, branch := range job.SCM.Branches.Branch {
 						branchRepresentation := strings.Replace(branch.Name, "/", "_", -1)
 						repositoryID := fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation)
-						if err := nexusClient.DeleteRepository(repositoryID); err != nil {
+						if err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
 							log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
 						} else {
 							log.Printf("Deleted Maven repositoryID %s\n", repositoryID)
-							if err := nexusClient.DeleteRepositoryFromGroup(repositoryID, *nexusRepositoryGroupID); err != nil {
-								log.Printf("stashkins.main failed to delete Maven repository %s from repository group %s: %+v\n", repositoryID, *nexusRepositoryGroupID, err)
+							if err := mavenRepositoryClient.DeleteRepositoryFromGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
+								log.Printf("stashkins.main failed to delete Maven repository %s from repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
 							} else {
-								log.Printf("Removed Maven repositoryID %s from repository groupID %s\n", repositoryID, *nexusRepositoryGroupID)
+								log.Printf("Removed Maven repositoryID %s from repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
 							}
 						}
 					}
@@ -220,18 +218,20 @@ func main() {
 					log.Printf("created job %+v\n", jobDescr)
 				}
 
-				if *doNexus {
+				if *doMavenRepoManagement {
 					branchRepresentation := strings.Replace(branch, "/", "_", -1)
 					repositoryID := fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation)
-					if err := nexusClient.CreateRepository(repositoryID); err != nil {
-						log.Printf("stashkins.main failed to create Maven repository %s: %+v\n", repositoryID, err)
-					} else {
-						log.Printf("Created Maven repositoryID %s\n", repositoryID)
-						if err := nexusClient.AddRepositoryToGroup(repositoryID, *nexusRepositoryGroupID); err != nil {
-							log.Printf("stashkins.main failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, *nexusRepositoryGroupID, err)
+					if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
+						if err := mavenRepositoryClient.CreateRepository(repositoryID); err != nil {
+							log.Printf("stashkins.main failed to create Maven repository %s: %+v\n", repositoryID, err)
 						} else {
-							log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, *nexusRepositoryGroupID)
+							log.Printf("Created Maven repositoryID %s\n", repositoryID)
 						}
+					}
+					if err := mavenRepositoryClient.AddRepositoryToGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
+						log.Printf("stashkins.main failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
+					} else {
+						log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
 					}
 				}
 			}
