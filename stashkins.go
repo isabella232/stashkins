@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/xoom/jenkins"
+	"github.com/xoom/maventools/nexus"
 	"github.com/xoom/stash"
 )
 
@@ -33,6 +35,12 @@ var (
 	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
 	stashPassword = flag.String("stash-password", "", "Password for Stash authentication")
 
+	nexusBaseURL         = flag.String("nexus-base-url", "http://localhost:8081/nexus", "Sonatype Nexus Base URL")
+	nexusUserName        = flag.String("nexus-username", "", "Username for Sonatype Nexus authentication")
+	nexusPassword        = flag.String("nexus-password", "", "Password for Sonatype Nexus authentication")
+	nexusRepositoryGroup = flag.String("nexus-repository-group", "", "Repository group in which to create new per-branch repositories")
+	doNexus              = flag.Bool("do-nexus", false, "Whether to create, delete and update Nexus Maven repositories as per-branch operations")
+
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
 
 	version   string
@@ -51,6 +59,13 @@ func main() {
 		os.Exit(0)
 	}
 	if *jobSync {
+
+		if *doNexus && (*nexusUserName == "" || *nexusPassword == "") {
+			log.Fatalf("Nexus username and password are required\n")
+		}
+
+		nexusClient := nexus.NewClient(*nexusBaseURL, *nexusUserName, *nexusPassword)
+
 		// Get Stash repositories.
 		repos, err := stash.GetRepositories(*stashBaseURL)
 		if err != nil {
@@ -113,6 +128,19 @@ func main() {
 					log.Printf("stashkins.main error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
 				} else {
 					log.Printf("Deleting obsolete job %+v\n", job.JobName)
+				}
+
+				// Nexus
+				if *doNexus {
+					for _, branch := range job.SCM.Branches.Branch {
+						effectiveBranch := strings.Replace(branch.Name, "/", "_", -1)
+						repositoryID := fmt.Sprintf("%s.%s.%s", repo.Project, repo.Slug, effectiveBranch)
+						if err := nexusClient.DeleteRepository(repositoryID); err != nil {
+							log.Printf("stashkins.main failed to delete Nexus Maven repository %s: %+v\n", repositoryID, err)
+						} else {
+							log.Printf("Deleted Nexus Maven repositoryID %s\n", repositoryID)
+						}
+					}
 				}
 			}
 		}
