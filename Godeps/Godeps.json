@@ -9,6 +9,10 @@
 		{
 			"ImportPath": "github.com/xoom/stash",
 			"Rev": "df24d171c94fa2649163586c8f7b8557eea74fc9"
+		},
+		{
+			"ImportPath": "github.com/xoom/maventools/nexus",
+			"Rev": "96877679b22b7cff7e77315ca73ba7e1b0d38932"
 		}
 	]
 }
