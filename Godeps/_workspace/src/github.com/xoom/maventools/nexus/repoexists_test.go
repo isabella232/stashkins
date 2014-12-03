@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/xoom/maventools"
 )
 
 func TestRepoExists(t *testing.T) {
@@ -30,7 +32,8 @@ func TestRepoExists(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	var client maventools.Client
+	client = NewClient(server.URL, "user", "password")
 	exists, err := client.RepositoryExists("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)

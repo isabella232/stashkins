@@ -77,9 +77,12 @@ func TestCreateRepo(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	err := client.CreateRepository("somerepo")
+	i, err := client.CreateSnapshotRepository("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
+	}
+	if i != 201 {
+		t.Fatalf("Want 201 but got %d\n", i)
 	}
 }
 
@@ -90,8 +93,11 @@ func TestCreateRepoWithError(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	err := client.CreateRepository("somerepo")
+	i, err := client.CreateSnapshotRepository("somerepo")
 	if err == nil {
 		t.Fatalf("Expecting an error but did not get one\n")
+	}
+	if i != 400 {
+		t.Fatalf("Want 400 but got %d\n", i)
 	}
 }

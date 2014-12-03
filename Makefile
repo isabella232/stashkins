@@ -18,6 +18,7 @@ binaries: tools deps test
 deps:
 	go get -v github.com/xoom/stash
 	go get -v github.com/xoom/jenkins
+	go get -v github.com/xoom/maventools
 	go get -v github.com/xoom/maventools/nexus
 
 tools:

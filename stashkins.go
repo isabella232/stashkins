@@ -146,10 +146,13 @@ func main() {
 							if rc == 204 {
 								log.Printf("Deleted Maven repositoryID %s\n", repositoryID)
 							}
-							if err := mavenRepositoryClient.RemoveRepositoryFromGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
-								log.Printf("stashkins.main failed to delete Maven repository %s from repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
+							repositoryGroupID := maventools.GroupID(*mavenRepositoryGroupID)
+							if rc, err := mavenRepositoryClient.RemoveRepositoryFromGroup(repositoryID, repositoryGroupID); err != nil {
+								log.Printf("stashkins.main failed to delete Maven repository %s from repository group %s: %+v\n", repositoryID, repositoryGroupID, err)
 							} else {
-								log.Printf("Removed Maven repositoryID %s from repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
+								if rc == 200 {
+									log.Printf("Removed Maven repositoryID %s from repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
+								}
 							}
 						}
 					}
@@ -227,12 +230,14 @@ func main() {
 
 				if *doMavenRepoManagement {
 					branchRepresentation := strings.Replace(branch, "/", "_", -1)
-					repositoryID := fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation)
+					repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
 					if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
-						if err := mavenRepositoryClient.CreateRepository(repositoryID); err != nil {
+						if rc, err := mavenRepositoryClient.CreateSnapshotRepository(repositoryID); err != nil {
 							log.Printf("stashkins.main failed to create Maven repository %s: %+v\n", repositoryID, err)
 						} else {
-							log.Printf("Created Maven repositoryID %s\n", repositoryID)
+							if rc == 201 {
+								log.Printf("Created Maven repositoryID %s\n", repositoryID)
+							}
 						}
 					} else {
 						if err != nil {
@@ -241,10 +246,13 @@ func main() {
 							log.Printf("stashkins.main Maven repositoryID %s exists.  Skipping.\n", repositoryID)
 						}
 					}
-					if err := mavenRepositoryClient.AddRepositoryToGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
+					repositoryGroupID := maventools.GroupID(*mavenRepositoryGroupID)
+					if rc, err := mavenRepositoryClient.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
 						log.Printf("stashkins.main failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
 					} else {
-						log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
+						if rc == 200 {
+							log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
+						}
 					}
 				}
 			}

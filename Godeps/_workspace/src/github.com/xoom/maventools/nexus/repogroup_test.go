@@ -48,15 +48,20 @@ func TestGetRepoGroup(t *testing.T) {
 			t.Fatalf("Wanted dXNlcjpwYXNzd29yZA== but got %s\n", base64)
 		}
 
+		w.WriteHeader(200)
 		fmt.Fprintf(w, "%s", group)
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	group, err := client.RepositoryGroup("snapshotgroup")
+	group, rc, err := client.repositoryGroup("snapshotgroup")
 
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
+	}
+
+	if rc != 200 {
+		t.Fatalf("Want 200 but got %d\n", rc)
 	}
 
 	if group.Data.Provider != "maven2" {
@@ -103,9 +108,13 @@ func TestGetRepoGroupNotFound(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	_, err := client.RepositoryGroup("snapshotgroup")
+	_, rc, err := client.repositoryGroup("snapshotgroup")
 
 	if err == nil {
 		t.Fatalf("Expecting an error but got none\n")
+	}
+
+	if rc != 404 {
+		t.Fatalf("Want 404 but got %d\n", rc)
 	}
 }

@@ -1,0 +1,4 @@
+package artifactory
+
+func init() {
+}

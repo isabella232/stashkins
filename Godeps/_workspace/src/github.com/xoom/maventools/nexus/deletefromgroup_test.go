@@ -63,7 +63,7 @@ func TestDeleteFromGroup(t *testing.T) {
 			t.Fatalf("Not expecting an error but got one: %v\n", err)
 		}
 
-		var repogroup RepoGroup
+		var repogroup repoGroup
 		if err := json.Unmarshal(data, &repogroup); err != nil {
 			t.Fatalf("Not expecting an error but got one: %v\n", err)
 		}
@@ -79,11 +79,19 @@ func TestDeleteFromGroup(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	if err := client.DeleteRepositoryFromGroup("plat.trnk.trnk679", "agroup"); err != nil {
+	rc, err := client.RemoveRepositoryFromGroup("plat.trnk.trnk679", "agroup")
+	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
 	}
+	if rc != 200 {
+		t.Fatalf("Want 200 but got: %d\n", rc)
+	}
 
-	if err := client.DeleteRepositoryFromGroup("notpresent", "agroup"); err != nil {
+	rc, err = client.RemoveRepositoryFromGroup("notpresent", "agroup")
+	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
+	}
+	if rc != 0 {
+		t.Fatalf("Want 0 but got: %d\n", rc)
 	}
 }

@@ -31,9 +31,12 @@ func TestDeleteRepo(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	err := client.DeleteRepository("somerepo")
+	i, err := client.DeleteRepository("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
+	}
+	if i != 204 {
+		t.Fatalf("Want 204 but got %d\n", i)
 	}
 }
 
@@ -44,9 +47,12 @@ func TestDeleteRepoNotFound(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	err := client.DeleteRepository("somerepo")
+	i, err := client.DeleteRepository("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
+	}
+	if i != 404 {
+		t.Fatalf("Want 404 but got %d\n", i)
 	}
 }
 
@@ -57,8 +63,11 @@ func TestDeleteRepoUnexpectedResponse(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "user", "password")
-	err := client.DeleteRepository("somerepo")
+	i, err := client.DeleteRepository("somerepo")
 	if err == nil {
 		t.Fatalf("Expecting an error but got none\n")
+	}
+	if i != 401 {
+		t.Fatalf("Want 401 but got %d\n", i)
 	}
 }
