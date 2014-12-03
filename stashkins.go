@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/xoom/jenkins"
+	"github.com/xoom/maventools"
 	"github.com/xoom/maventools/nexus"
 	"github.com/xoom/stash"
 )
@@ -133,14 +134,19 @@ func main() {
 				// Nexus
 				if *doMavenRepoManagement {
 					for _, branch := range job.SCM.Branches.Branch {
-						branchRepresentation := strings.Replace(branch.Name, "origin/", "", 1)
+						var branchRepresentation string
+						if strings.HasPrefix(branch.Name, "origin/") {
+							branchRepresentation = branch.Name[len("origin/"):]
+						}
 						branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
-						repositoryID := fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation)
-						if err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
+						repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
+						if rc, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
 							log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
 						} else {
-							log.Printf("Deleted Maven repositoryID %s\n", repositoryID)
-							if err := mavenRepositoryClient.DeleteRepositoryFromGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
+							if rc == 204 {
+								log.Printf("Deleted Maven repositoryID %s\n", repositoryID)
+							}
+							if err := mavenRepositoryClient.RemoveRepositoryFromGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
 								log.Printf("stashkins.main failed to delete Maven repository %s from repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
 							} else {
 								log.Printf("Removed Maven repositoryID %s from repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
