@@ -133,7 +133,8 @@ func main() {
 				// Nexus
 				if *doMavenRepoManagement {
 					for _, branch := range job.SCM.Branches.Branch {
-						branchRepresentation := strings.Replace(branch.Name, "/", "_", -1)
+						branchRepresentation := strings.Replace(branch.Name, "origin/", "", 1)
+						branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
 						repositoryID := fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation)
 						if err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
 							log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
