@@ -39,7 +39,7 @@ var (
 	mavenUsername          = flag.String("maven-repo-username", "", "Username for Maven repository management")
 	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management")
 	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to create new per-branch repositories")
-	doMavenRepoManagement  = flag.Bool("do-maven-repo", false, "Whether to create, delete and update Maven repositories as per-branch operations")
+	doMavenRepoManagement  = flag.Bool("do-maven-repo-management", false, "Whether to create, delete and update Maven repositories as per-branch operations")
 
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
 
@@ -226,6 +226,12 @@ func main() {
 							log.Printf("stashkins.main failed to create Maven repository %s: %+v\n", repositoryID, err)
 						} else {
 							log.Printf("Created Maven repositoryID %s\n", repositoryID)
+						}
+					} else {
+						if err != nil {
+							log.Printf("stashkins.main error creating Maven repositoryID %s: %v\n", repositoryID, err)
+						} else {
+							log.Printf("stashkins.main Maven repositoryID %s exists.  Skipping.\n", repositoryID)
 						}
 					}
 					if err := mavenRepositoryClient.AddRepositoryToGroup(repositoryID, *mavenRepositoryGroupID); err != nil {
