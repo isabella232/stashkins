@@ -39,10 +39,14 @@ var (
 	mavenBaseURL           = flag.String("maven-repo-base-url", "http://localhost:8081/nexus", "Maven repository management Base URL")
 	mavenUsername          = flag.String("maven-repo-username", "", "Username for Maven repository management")
 	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management")
-	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to create new per-branch repositories")
-	doMavenRepoManagement  = flag.Bool("do-maven-repo-management", false, "Whether to create, delete and update Maven repositories as per-branch operations")
+	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
+	doNexus                = flag.Bool("do-nexus", false, "Do Maven repository management against Sonatype Nexus.  Precludes do-artifactory.")
+	doArtifactory          = flag.Bool("do-artifactory", false, "Do Maven repository management against JFrog Artifactory.  Precludes do-nexus.")
 
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
+
+	mavenRepositoryClient maventools.Client
+	doMavenRepoManagement bool
 
 	version   string
 	commit    string
@@ -59,13 +63,26 @@ func main() {
 	if *versionFlag {
 		os.Exit(0)
 	}
+
+	if *doNexus && *doArtifactory {
+		log.Fatalf("Only one of do-nexus or do-artifactory may be used\n")
+	}
+
+	doMavenRepoManagement = *doNexus || *doArtifactory
+
+	if *doNexus {
+		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
+	}
+
+	if *doArtifactory {
+		log.Fatalf("Artifactory is not supported yet")
+	}
+
+	if doMavenRepoManagement && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
+		log.Fatalf("Nexus username, password, and repository group are required\n")
+	}
+
 	if *jobSync {
-
-		if *doMavenRepoManagement && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
-			log.Fatalf("Nexus username, password, and repository group are required\n")
-		}
-
-		mavenRepositoryClient := nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 
 		// Get Stash repositories.
 		repos, err := stash.GetRepositories(*stashBaseURL)
@@ -132,7 +149,7 @@ func main() {
 				}
 
 				// Nexus
-				if *doMavenRepoManagement {
+				if doMavenRepoManagement {
 					for _, branch := range job.SCM.Branches.Branch {
 						var branchRepresentation string
 						if strings.HasPrefix(branch.Name, "origin/") {
@@ -145,6 +162,9 @@ func main() {
 						} else {
 							if rc == 204 {
 								log.Printf("Deleted Maven repositoryID %s\n", repositoryID)
+							}
+							if rc == 404 {
+								log.Printf("Maven repositoryID not deleted.  Not found\n")
 							}
 							repositoryGroupID := maventools.GroupID(*mavenRepositoryGroupID)
 							if rc, err := mavenRepositoryClient.RemoveRepositoryFromGroup(repositoryID, repositoryGroupID); err != nil {
@@ -228,7 +248,7 @@ func main() {
 					log.Printf("created job %+v\n", jobDescr)
 				}
 
-				if *doMavenRepoManagement {
+				if doMavenRepoManagement {
 					branchRepresentation := strings.Replace(branch, "/", "_", -1)
 					repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
 					if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
