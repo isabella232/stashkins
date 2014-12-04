@@ -18,11 +18,13 @@ import (
 
 // JobTemplate is used to populate a template XML Jenkins job config file with appropriate values for prospective new jobs
 type JobTemplate struct {
-	JobName             string // code in ssh://git@example.com:9999/teamp/code.git
-	Description         string // mashup of repository URL and branch name
-	BranchName          string // feature/PROJ-999, as in feature/PROJ-999
-	RepositoryURL       string // ssh://git@example.com:9999/teamp/code.git
-	NexusRepositoryType string // if branch == master then releases else snapshots
+	JobName                             string // code in ssh://git@example.com:9999/teamp/code.git
+	Description                         string // mashup of repository URL and branch name
+	BranchName                          string // feature/PROJ-999, as in feature/PROJ-999
+	RepositoryURL                       string // ssh://git@example.com:9999/teamp/code.git
+	NexusRepositoryType                 string // if branch == master then releases else snapshots
+	PerBranchMavenSnapshotRepositoryID  string // the Maven repository ID to which to publish this job's artifacts
+	PerBranchMavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
 }
 
 var (
@@ -216,12 +218,18 @@ func main() {
 					branchType, branchSuffix = suffixer(branch)
 				}
 
+				// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
+				mavenSnapshotRepositoryID := mavenRepositoryID(repo.Project.Key, repo.Slug, branch)
+				mavenSnapshotRepositoryURL := fmt.Printf("%s/content/repositories/%s", mavenBaseURL, mavenSnapshotRepositoryID)
+
 				jobDescr := JobTemplate{
-					JobName:             repo.Slug + "-continuous-" + branchType + branchSuffix,
-					Description:         "This is a continuous build for " + repo.Slug + ", branch " + branch,
-					BranchName:          branch,
-					RepositoryURL:       *jobRepositoryURL,
-					NexusRepositoryType: nexusType,
+					JobName:                             repo.Slug + "-continuous-" + branchType + branchSuffix,
+					Description:                         "This is a continuous build for " + repo.Slug + ", branch " + branch,
+					BranchName:                          branch,
+					RepositoryURL:                       *jobRepositoryURL,
+					NexusRepositoryType:                 nexusType,
+					PerBranchMavenSnapshotRepositoryID:  mavenSnapshotRepositoryID,
+					PerBranchMavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
 				}
 
 				// Prepare the job template
@@ -293,4 +301,17 @@ func suffixer(branch string) (string, string) {
 		suffix = strings.Replace(suffix, "/", "-", -1)
 	}
 	return prefix, "-" + suffix
+}
+
+// Form the maven repository ID from project parts.  Each part must be cleaned and made URL-safe because the result will form part of an HTTP URL.
+func mavenRepositoryID(gitRepoProjectKey, gitRepoSlug, gitBranch string) string {
+	return fmt.Sprintf("%s.%s.%s", mavenRepoIDPartCleaner(gitRepoProjectKey), mavenRepoIDPartCleaner(gitRepoSlug), mavenRepoIDPartCleaner(gitBranch))
+}
+
+func mavenRepoIDPartCleaner(b string) string {
+	thing := b
+	thing = strings.Replace(thing, "/", "_", -1)
+	thing = strings.Replace(thing, "&", "_", -1)
+	thing = strings.Replace(thing, "?", "_", -1)
+	return thing
 }
