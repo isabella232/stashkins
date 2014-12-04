@@ -20,15 +20,18 @@ type (
 
 	CreateRepoData struct {
 		XMLName            xml.Name                `xml:"data"`
-		ContentResourceURI string                  `xml:"contentResourceURI"`
 		Id                 maventools.RepositoryID `xml:"id"`
 		Name               string                  `xml:"name"`
+		ContentResourceURI string                  `xml:"contentResourceURI"`
 		Provider           string                  `xml:"provider"`
 		ProviderRole       string                  `xml:"providerRole"`
 		Format             string                  `xml:"format"`
 		RepoType           string                  `xml:"repoType"`
 		RepoPolicy         string                  `xml:"repoPolicy"`
+		WritePolicy        string                  `xml:"writePolicy"`
 		Exposed            bool                    `xml:"exposed"`
+		Browseable         bool                    `xml:"browseable"`
+		Indexable          bool                    `xml:"indexable"`
 	}
 
 	// The type retrieved or put to read or mutate a repository group.
@@ -51,7 +54,7 @@ type (
 	repository struct {
 		Name        string                  `json:"name"`
 		ID          maventools.RepositoryID `json:"id"`
-		ResourceURI string                  `json:resourceURI"`
+		ResourceURI string                  `json:"resourceURI"`
 	}
 
 	Client struct {
@@ -105,7 +108,10 @@ func (client Client) CreateSnapshotRepository(repositoryID maventools.Repository
 			ProviderRole:       "org.sonatype.nexus.proxy.repository.Repository",
 			ContentResourceURI: client.BaseURL + "/content/repositories/" + string(repositoryID),
 			Format:             "maven2",
+			Browseable:         true,
+			Indexable:          true,
 			Exposed:            true,
+			WritePolicy:        "ALLOW_WRITE",
 		}}
 
 	data, err := xml.Marshal(&repo)

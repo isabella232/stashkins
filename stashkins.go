@@ -65,7 +65,7 @@ func main() {
 	}
 
 	if *doNexus && *doArtifactory {
-		log.Fatalf("Only one of do-nexus or do-artifactory may be used\n")
+		log.Fatalf("Only one of do-nexus or do-artifactory may be set.\n")
 	}
 
 	doMavenRepoManagement = *doNexus || *doArtifactory
@@ -79,7 +79,7 @@ func main() {
 	}
 
 	if doMavenRepoManagement && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
-		log.Fatalf("Nexus username, password, and repository group are required\n")
+		log.Fatalf("Maven repository management username, password, and repository group are required\n")
 	}
 
 	if *jobSync {
@@ -148,7 +148,7 @@ func main() {
 					log.Printf("Deleting obsolete job %+v\n", job.JobName)
 				}
 
-				// Nexus
+				// Maven repo management
 				if doMavenRepoManagement {
 					for _, branch := range job.SCM.Branches.Branch {
 						var branchRepresentation string
@@ -248,6 +248,7 @@ func main() {
 					log.Printf("created job %+v\n", jobDescr)
 				}
 
+				// Maven repo management
 				if doMavenRepoManagement {
 					branchRepresentation := strings.Replace(branch, "/", "_", -1)
 					repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
