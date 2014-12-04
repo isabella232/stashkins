@@ -220,7 +220,7 @@ func main() {
 
 				// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
 				mavenSnapshotRepositoryID := mavenRepositoryID(repo.Project.Key, repo.Slug, branch)
-				mavenSnapshotRepositoryURL := fmt.Printf("%s/content/repositories/%s", mavenBaseURL, mavenSnapshotRepositoryID)
+				mavenSnapshotRepositoryURL := fmt.Sprintf("%s/content/repositories/%s", mavenBaseURL, mavenSnapshotRepositoryID)
 
 				jobDescr := JobTemplate{
 					JobName:                             repo.Slug + "-continuous-" + branchType + branchSuffix,
