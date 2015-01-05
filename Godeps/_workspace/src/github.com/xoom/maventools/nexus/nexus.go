@@ -32,6 +32,7 @@ type (
 		Exposed            bool                    `xml:"exposed"`
 		Browseable         bool                    `xml:"browseable"`
 		Indexable          bool                    `xml:"indexable"`
+		NotFoundCacheTTL   int                     `xml:"notFoundCacheTTL"`
 	}
 
 	// The type retrieved or put to read or mutate a repository group.
@@ -112,6 +113,7 @@ func (client Client) CreateSnapshotRepository(repositoryID maventools.Repository
 			Indexable:          true,
 			Exposed:            true,
 			WritePolicy:        "ALLOW_WRITE",
+			NotFoundCacheTTL:   1440,
 		}}
 
 	data, err := xml.Marshal(&repo)

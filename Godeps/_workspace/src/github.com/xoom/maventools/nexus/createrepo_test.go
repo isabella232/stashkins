@@ -71,6 +71,9 @@ func TestCreateRepo(t *testing.T) {
 		if !repo.Data.Exposed {
 			t.Fatalf("Want true but got false\n")
 		}
+		if repo.Data.NotFoundCacheTTL != 1440 {
+			t.Fatalf("Want 1440 but got %d\n", repo.Data.NotFoundCacheTTL)
+		}
 
 		w.WriteHeader(201)
 	}))
