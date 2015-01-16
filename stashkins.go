@@ -31,8 +31,10 @@ var (
 	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
-	jobTemplateFile  = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
-	jobRepositoryURL = flag.String("job-repository-url", "ssh://git@example.com:9999/teamp/code.git", "The Git repository URL referenced by the Jenkins jobs.")
+	jobTemplateFile = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
+
+	jobRepositoryProjectKey = flag.String("repository-project-key", "", "The Stash Project Key for the job-repository of interest.  For example, PLAYG.")
+	jobRepositorySlug       = flag.String("repository-slug", "", "The Stash repository 'slug' for the job-repository of interest.  For example, 'trunk'.")
 
 	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
 	stashPassword = flag.String("stash-password", "", "Password for Stash authentication")
@@ -65,35 +67,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *doNexus && *doArtifactory {
-		log.Fatalf("Only one of do-nexus or do-artifactory may be set.\n")
-	}
+	validateCommandLineArguments()
 
 	doMavenRepoManagement = *doNexus || *doArtifactory
 
-	if *doNexus {
-		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
-	}
-
-	if *doArtifactory {
-		log.Fatalf("Artifactory is not supported yet")
-	}
-
-	if doMavenRepoManagement && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
-		log.Fatalf("Maven repository management username, password, and repository group are required\n")
-	}
-
-	// Get Stash repositories.
-	repos, err := stash.GetRepositories(*stashBaseURL)
+	repo, err := stash.GetRepository(*stashBaseURL, *stashUserName, *stashPassword, *jobRepositoryProjectKey, *jobRepositorySlug)
 	if err != nil {
-		log.Fatalf("stash.GetRepositories error: %v\n", err)
-	}
-	repo, ok := stash.HasRepository(repos, *jobRepositoryURL)
-	if !ok {
-		log.Fatalf("stashkins.main repository not found in Stash: %s\n", *jobRepositoryURL)
+		log.Fatalf("stashkins.main GetRepository error %v\n", err)
 	}
 
-	log.Printf("Analyzing repository %s...\n", *jobRepositoryURL)
+	jobRepositoryURL := repo.SshUrl()
+	if jobRepositoryURL == "" {
+		log.Fatalf("No SSH based URL for this repository")
+	}
+
+	log.Printf("Analyzing repository %s...\n", jobRepositoryURL)
 
 	allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
 	if err != nil {
@@ -112,7 +100,7 @@ func main() {
 			if strings.HasPrefix(remoteCfg.URL, "http") {
 				log.Printf("Found a job Git http URL.  This is not supported: %s\n", remoteCfg.URL)
 			}
-			if remoteCfg.URL == *jobRepositoryURL {
+			if remoteCfg.URL == jobRepositoryURL {
 				appJobConfigs = append(appJobConfigs, jobConfig)
 			}
 		}
@@ -120,7 +108,7 @@ func main() {
 
 	stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
 	if err != nil {
-		log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", *jobRepositoryURL, err)
+		log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", jobRepositoryURL, err)
 	}
 
 	// Find branches Jenkins is building that no longer exist in Stash.  The jobs that are considered obsolete must have corresponding Stash branches
@@ -231,7 +219,7 @@ func main() {
 				JobName:                             repo.Slug + "-continuous-" + branchType + branchSuffix,
 				Description:                         "This is a continuous build for " + repo.Slug + ", branch " + branch,
 				BranchName:                          branch,
-				RepositoryURL:                       *jobRepositoryURL,
+				RepositoryURL:                       jobRepositoryURL,
 				NexusRepositoryType:                 nexusType,
 				PerBranchMavenSnapshotRepositoryID:  mavenSnapshotRepositoryID,
 				PerBranchMavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
@@ -322,4 +310,30 @@ func mavenRepoIDPartCleaner(b string) string {
 
 func branchIsManaged(stashBranch string) bool {
 	return strings.HasPrefix(stashBranch, "feature/")
+}
+
+func validateCommandLineArguments() {
+	if *jobRepositoryProjectKey == "" {
+		log.Fatalf("repository-project-key must be set\n")
+	}
+
+	if *jobRepositorySlug == "" {
+		log.Fatalf("repository-slug must be set.\n")
+	}
+
+	if *doNexus && *doArtifactory {
+		log.Fatalf("Only one of do-nexus or do-artifactory may be set.\n")
+	}
+
+	if *doNexus {
+		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
+	}
+
+	if *doArtifactory {
+		log.Fatalf("Artifactory is not supported yet")
+	}
+
+	if (*doNexus || *doArtifactory) && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
+		log.Fatalf("Maven repository management username, password, and repository group are required\n")
+	}
 }
