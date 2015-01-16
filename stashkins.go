@@ -148,23 +148,8 @@ func main() {
 					}
 					branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
 					repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
-					if rc, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
+					if _, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
 						log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
-					} else {
-						if rc == 204 {
-							log.Printf("Deleted Maven repositoryID %s\n", repositoryID)
-						}
-						if rc == 404 {
-							log.Printf("Maven repositoryID not deleted.  Not found\n")
-						}
-						repositoryGroupID := maventools.GroupID(*mavenRepositoryGroupID)
-						if rc, err := mavenRepositoryClient.RemoveRepositoryFromGroup(repositoryID, repositoryGroupID); err != nil {
-							log.Printf("stashkins.main failed to delete Maven repository %s from repository group %s: %+v\n", repositoryID, repositoryGroupID, err)
-						} else {
-							if rc == 200 {
-								log.Printf("Removed Maven repositoryID %s from repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
-							}
-						}
 					}
 				}
 			}
