@@ -123,12 +123,16 @@ func main() {
 		log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", *jobRepositoryURL, err)
 	}
 
-	// Find branches Jenkins is building that no longer exist in Stash
+	// Find branches Jenkins is building that no longer exist in Stash.  The jobs that are considered obsolete must have corresponding Stash branches
+	// that are "managed, which means its name must begin with "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
 	for _, jobConfig := range appJobConfigs {
 		deleteJobConfig := true
 		for _, builtBranch := range jobConfig.SCM.Branches.Branch {
 			for stashBranch, _ := range stashBranches {
+				if !branchIsManaged(stashBranch) {
+					continue
+				}
 				if strings.HasSuffix(builtBranch.Name, stashBranch) {
 					deleteJobConfig = false
 				}
@@ -179,9 +183,13 @@ func main() {
 		}
 	}
 
-	// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.
+	// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.  The Stash branch must be a "managed" branch, which
+	// means its name must begin with "feature/".
 	missingJobs := make([]string, 0)
 	for branch, _ := range stashBranches {
+		if !branchIsManaged(branch) {
+			continue
+		}
 		missingJob := true
 		for _, jobConfig := range appJobConfigs {
 			for _, builtBranch := range jobConfig.SCM.Branches.Branch {
@@ -310,4 +318,8 @@ func mavenRepoIDPartCleaner(b string) string {
 	thing = strings.Replace(thing, "&", "_", -1)
 	thing = strings.Replace(thing, "?", "_", -1)
 	return thing
+}
+
+func branchIsManaged(stashBranch string) bool {
+	return strings.HasPrefix(stashBranch, "feature/")
 }
