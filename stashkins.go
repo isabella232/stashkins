@@ -169,8 +169,7 @@ func main() {
 		}
 	}
 
-	// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.  The Stash branch must be a "managed" branch, which
-	// means its name must begin with "feature/".
+	// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.  The outstanding Stash branch must contain "feature/".
 	missingJobs := make([]string, 0)
 	for branch, _ := range stashBranches {
 		if !branchIsManaged(branch) {
@@ -192,24 +191,10 @@ func main() {
 		}
 	}
 
-	// Create Jenkins jobs
+	// Create missing Jenkins jobs
 	log.Printf("Number of missing jobs: %d\n", len(missingJobs))
 	for _, branch := range missingJobs {
-		var nexusType string
-		if branch == "master" {
-			nexusType = "releases"
-		} else {
-			nexusType = "snapshots"
-		}
-
-		var branchType string
-		var branchSuffix string
-		if branch == "master" || branch == "develop" || !strings.Contains(branch, "/") {
-			branchType = branch
-			branchSuffix = ""
-		} else {
-			branchType, branchSuffix = suffixer(branch)
-		}
+		branchType, branchSuffix := suffixer(branch)
 
 		// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
 		mavenSnapshotRepositoryID := mavenRepositoryID(repo.Project.Key, repo.Slug, branch)
@@ -220,7 +205,7 @@ func main() {
 			Description:                         "This is a continuous build for " + repo.Slug + ", branch " + branch,
 			BranchName:                          branch,
 			RepositoryURL:                       jobRepositoryURL,
-			NexusRepositoryType:                 nexusType,
+			NexusRepositoryType:                 "snapshots",
 			PerBranchMavenSnapshotRepositoryID:  mavenSnapshotRepositoryID,
 			PerBranchMavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
 		}
