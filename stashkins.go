@@ -69,6 +69,10 @@ func main() {
 
 	validateCommandLineArguments()
 
+	if *doNexus {
+		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
+	}
+
 	doMavenRepoManagement = *doNexus || *doArtifactory
 
 	repo, err := stash.GetRepository(*stashBaseURL, *stashUserName, *stashPassword, *jobRepositoryProjectKey, *jobRepositorySlug)
@@ -310,15 +314,11 @@ func validateCommandLineArguments() {
 		log.Fatalf("Only one of do-nexus or do-artifactory may be set.\n")
 	}
 
-	if *doNexus {
-		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
-	}
-
 	if *doArtifactory {
 		log.Fatalf("Artifactory is not supported yet")
 	}
 
-	if (*doNexus || *doArtifactory) && (*mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
-		log.Fatalf("Maven repository management username, password, and repository group are required\n")
+	if (*doNexus || *doArtifactory) && (*mavenBaseURL == "" || *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
+		log.Fatalf("maven-repo-base-url, maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
 	}
 }
