@@ -74,63 +74,71 @@ func main() {
 
 	doMavenRepoManagement := *doNexus || *doArtifactory
 
+	// Fetch repository metadata
 	repo, err := stash.GetRepository(*stashBaseURL, *stashUserName, *stashPassword, *jobRepositoryProjectKey, *jobRepositorySlug)
 	if err != nil {
 		log.Fatalf("stashkins.main GetRepository error %v\n", err)
 	}
-
 	jobRepositoryURL := repo.SshUrl()
 	if jobRepositoryURL == "" {
 		log.Fatalf("No SSH based URL for this repository")
 	}
-
 	log.Printf("Analyzing repository %s...\n", jobRepositoryURL)
 
-	allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
-	if err != nil {
-		log.Fatalf("stashkins.main get jobs error: %v\n", err)
-	}
-
-	// Jenkins jobs which build against a branch under the Git URL
-	targetJobs := make([]jenkins.JobConfig, 0)
-	for _, job := range allJobs {
-		jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
-		if err != nil {
-			// This probably means the job config did not conform to the backing XML model we used.  Not a maven job.
-			log.Printf("stashkins.main Jenkins GetJobConfig error for job %s: %v, skipping...\n", job.Name, err)
-		}
-		for _, remoteCfg := range jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig {
-			if strings.HasPrefix(remoteCfg.URL, "http") {
-				log.Printf("Found a job Git http URL.  This is not supported: %s\n", remoteCfg.URL)
-			}
-			if remoteCfg.URL == jobRepositoryURL {
-				targetJobs = append(targetJobs, jobConfig)
-			}
-		}
-	}
-
+	// Fetch all branches for this repository
 	stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
 	if err != nil {
 		log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", jobRepositoryURL, err)
 	}
 
-	// Find branches Jenkins is building that no longer exist in Stash.  The jobs that are considered obsolete must have corresponding Stash branches
-	// that are "managed, which means its name must begin with "feature/".
+	// Fetch all Jenkins jobs
+	allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
+	if err != nil {
+		log.Fatalf("stashkins.main get jobs error: %v\n", err)
+	}
+
+	// Filter on jobs that build against a branch of the specified git repository
+	targetJobs := make([]jenkins.JobConfig, 0)
+	for _, job := range allJobs {
+		jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
+		if err != nil {
+			// This probably means the job config is not a maven job.
+			log.Printf("stashkins.main Jenkins GetJobConfig error (not a Maven job?) for job %s: %v.  Skipping.\n", job.Name, err)
+		}
+		if len(jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig) != 1 {
+			log.Printf("The job %s does not have exactly one UserRemoteConfig.  Skipping.\n", job.Name)
+			continue
+		}
+
+		remoteCfg := jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig[0]
+		if strings.HasPrefix(remoteCfg.URL, "http") {
+			log.Printf("Job %s references an HTTP Git URL.  Only SSH Git URLs are supported.\n", job.Name)
+			continue
+		}
+		if remoteCfg.URL == jobRepositoryURL {
+			targetJobs = append(targetJobs, jobConfig)
+		}
+	}
+
+	// Find branches Jenkins is building that no longer exist in Stash.  The branch the job is building must contain "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
 	for _, jobConfig := range targetJobs {
-		for _, builtBranch := range jobConfig.SCM.Branches.Branch {
-			if !branchIsManaged(builtBranch.Name) {
-				continue
+		if len(jobConfig.SCM.Branches.Branch) != 1 {
+			log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
+			continue
+		}
+		builtBranch := jobConfig.SCM.Branches.Branch[0]
+		if !branchIsManaged(builtBranch.Name) {
+			continue
+		}
+		deleteJobConfig := true
+		for stashBranch, _ := range stashBranches {
+			if strings.HasSuffix(builtBranch.Name, stashBranch) {
+				deleteJobConfig = false
 			}
-			deleteJobConfig := true
-			for stashBranch, _ := range stashBranches {
-				if strings.HasSuffix(builtBranch.Name, stashBranch) {
-					deleteJobConfig = false
-				}
-			}
-			if deleteJobConfig {
-				obsoleteJobs = append(obsoleteJobs, jobConfig)
-			}
+		}
+		if deleteJobConfig {
+			obsoleteJobs = append(obsoleteJobs, jobConfig)
 		}
 	}
 	if len(obsoleteJobs) > 0 {
