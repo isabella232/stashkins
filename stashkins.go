@@ -141,27 +141,29 @@ func main() {
 			obsoleteJobs = append(obsoleteJobs, jobConfig)
 		}
 	}
-	if len(obsoleteJobs) > 0 {
-		log.Printf("Number of obsolete jobs: %d\n", len(obsoleteJobs))
-		for _, job := range obsoleteJobs {
-			if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
-				log.Printf("stashkins.main error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
-			} else {
-				log.Printf("Deleting obsolete job %+v\n", job.JobName)
-			}
 
-			// Maven repo management
-			if doMavenRepoManagement {
-				for _, branch := range job.SCM.Branches.Branch {
-					var branchRepresentation string
-					if strings.HasPrefix(branch.Name, "origin/") {
-						branchRepresentation = branch.Name[len("origin/"):]
-					}
-					branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
-					repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
-					if _, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
-						log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
-					}
+	// Remove obsolete jobs
+	log.Printf("Number of obsolete jobs: %d\n", len(obsoleteJobs))
+	for _, job := range obsoleteJobs {
+		if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
+			log.Printf("stashkins.main error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
+		} else {
+			log.Printf("Deleting obsolete job %+v\n", job.JobName)
+		}
+
+		// Maven repo management
+		if doMavenRepoManagement {
+			for _, branch := range job.SCM.Branches.Branch {
+				var branchRepresentation string
+				if strings.HasPrefix(branch.Name, "origin/") {
+					branchRepresentation = branch.Name[len("origin/"):]
+				}
+				branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
+				repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
+				if _, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
+					log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
+				} else {
+					log.Printf("Deleted Maven repository %v\n", repositoryID)
 				}
 			}
 		}
@@ -176,105 +178,105 @@ func main() {
 		}
 		missingJob := true
 		for _, jobConfig := range targetJobs {
-			for _, builtBranch := range jobConfig.SCM.Branches.Branch {
-				if strings.HasSuffix(builtBranch.Name, branch) {
-					missingJob = false
-				}
+			if len(jobConfig.SCM.Branches.Branch) != 1 {
+				log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
+				continue
+			}
+			builtBranch := jobConfig.SCM.Branches.Branch[0]
+			if strings.HasSuffix(builtBranch.Name, branch) {
+				missingJob = false
 			}
 		}
 		if missingJob {
 			missingJobs = append(missingJobs, branch)
 		}
 	}
-	if len(missingJobs) > 0 {
-		log.Printf("Number of missing jobs: %d\n", len(missingJobs))
 
-		// Create Jenkins jobs
-		for _, branch := range missingJobs {
-			var nexusType string
-			if branch == "master" {
-				nexusType = "releases"
-			} else {
-				nexusType = "snapshots"
-			}
+	// Create Jenkins jobs
+	log.Printf("Number of missing jobs: %d\n", len(missingJobs))
+	for _, branch := range missingJobs {
+		var nexusType string
+		if branch == "master" {
+			nexusType = "releases"
+		} else {
+			nexusType = "snapshots"
+		}
 
-			var branchType string
-			var branchSuffix string
-			if branch == "master" || branch == "develop" || !strings.Contains(branch, "/") {
-				branchType = branch
-				branchSuffix = ""
-			} else {
-				branchType, branchSuffix = suffixer(branch)
-			}
+		var branchType string
+		var branchSuffix string
+		if branch == "master" || branch == "develop" || !strings.Contains(branch, "/") {
+			branchType = branch
+			branchSuffix = ""
+		} else {
+			branchType, branchSuffix = suffixer(branch)
+		}
 
-			// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
-			mavenSnapshotRepositoryID := mavenRepositoryID(repo.Project.Key, repo.Slug, branch)
-			mavenSnapshotRepositoryURL := fmt.Sprintf("%s/content/repositories/%s", *mavenBaseURL, mavenSnapshotRepositoryID)
+		// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
+		mavenSnapshotRepositoryID := mavenRepositoryID(repo.Project.Key, repo.Slug, branch)
+		mavenSnapshotRepositoryURL := fmt.Sprintf("%s/content/repositories/%s", *mavenBaseURL, mavenSnapshotRepositoryID)
 
-			jobDescr := JobTemplate{
-				JobName:                             repo.Slug + "-continuous-" + branchType + branchSuffix,
-				Description:                         "This is a continuous build for " + repo.Slug + ", branch " + branch,
-				BranchName:                          branch,
-				RepositoryURL:                       jobRepositoryURL,
-				NexusRepositoryType:                 nexusType,
-				PerBranchMavenSnapshotRepositoryID:  mavenSnapshotRepositoryID,
-				PerBranchMavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
-			}
+		jobDescr := JobTemplate{
+			JobName:                             repo.Slug + "-continuous-" + branchType + branchSuffix,
+			Description:                         "This is a continuous build for " + repo.Slug + ", branch " + branch,
+			BranchName:                          branch,
+			RepositoryURL:                       jobRepositoryURL,
+			NexusRepositoryType:                 nexusType,
+			PerBranchMavenSnapshotRepositoryID:  mavenSnapshotRepositoryID,
+			PerBranchMavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
+		}
 
-			// Prepare the job template
-			data, err := ioutil.ReadFile(*jobTemplateFile)
-			if err != nil {
-				log.Fatalf("stashkins.main cannot read job template file %s: %v\n", *jobTemplateFile, err)
-			}
-			jobTemplate, err := template.New("jobconfig").Parse(string(data))
-			if err != nil {
-				log.Fatalf("stashkins.main cannot parse job template file %s: %v\n", *jobTemplateFile, err)
-			}
-			result := bytes.NewBufferString("")
-			err = jobTemplate.Execute(result, jobDescr)
-			if err != nil {
-				log.Fatalf("stashkins.main cannot execute job template file %s: %v\n", *jobTemplateFile, err)
-			}
-			templateString := string(result.Bytes())
+		// Prepare the job template
+		data, err := ioutil.ReadFile(*jobTemplateFile)
+		if err != nil {
+			log.Fatalf("stashkins.main cannot read job template file %s: %v\n", *jobTemplateFile, err)
+		}
+		jobTemplate, err := template.New("jobconfig").Parse(string(data))
+		if err != nil {
+			log.Fatalf("stashkins.main cannot parse job template file %s: %v\n", *jobTemplateFile, err)
+		}
+		result := bytes.NewBufferString("")
+		err = jobTemplate.Execute(result, jobDescr)
+		if err != nil {
+			log.Fatalf("stashkins.main cannot execute job template file %s: %v\n", *jobTemplateFile, err)
+		}
+		templateString := string(result.Bytes())
 
-			// Create the job
-			err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templateString)
-			if err != nil {
-				log.Printf("stashkins.main failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
-			} else {
-				log.Printf("created job %+v\n", jobDescr)
-			}
+		// Create the job
+		err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templateString)
+		if err != nil {
+			log.Printf("stashkins.main failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
+		} else {
+			log.Printf("created job %s\n", jobDescr.JobName)
+		}
 
-			// Maven repo management
-			if doMavenRepoManagement {
-				branchRepresentation := strings.Replace(branch, "/", "_", -1)
-				repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
-				if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
-					if rc, err := mavenRepositoryClient.CreateSnapshotRepository(repositoryID); err != nil {
-						log.Printf("stashkins.main failed to create Maven repository %s: %+v\n", repositoryID, err)
-					} else {
-						if rc == 201 {
-							log.Printf("Created Maven repositoryID %s\n", repositoryID)
-						}
-					}
+		// Maven repo management
+		if doMavenRepoManagement {
+			branchRepresentation := strings.Replace(branch, "/", "_", -1)
+			repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
+			if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
+				if rc, err := mavenRepositoryClient.CreateSnapshotRepository(repositoryID); err != nil {
+					log.Printf("stashkins.main failed to create Maven repository %s: %+v\n", repositoryID, err)
 				} else {
-					if err != nil {
-						log.Printf("stashkins.main error creating Maven repositoryID %s: %v\n", repositoryID, err)
-					} else {
-						log.Printf("stashkins.main Maven repositoryID %s exists.  Skipping.\n", repositoryID)
+					if rc == 201 {
+						log.Printf("Created Maven repositoryID %s\n", repositoryID)
 					}
 				}
-				repositoryGroupID := maventools.GroupID(*mavenRepositoryGroupID)
-				if rc, err := mavenRepositoryClient.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
-					log.Printf("stashkins.main failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
+			} else {
+				if err != nil {
+					log.Printf("stashkins.main error creating Maven repositoryID %s: %v\n", repositoryID, err)
 				} else {
-					if rc == 200 {
-						log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
-					}
+					log.Printf("stashkins.main Maven repositoryID %s exists.  Skipping.\n", repositoryID)
+				}
+			}
+			repositoryGroupID := maventools.GroupID(*mavenRepositoryGroupID)
+			if rc, err := mavenRepositoryClient.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
+				log.Printf("stashkins.main failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, *mavenRepositoryGroupID, err)
+			} else {
+				if rc == 200 {
+					log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, *mavenRepositoryGroupID)
 				}
 			}
 		}
-
 	}
 }
 
