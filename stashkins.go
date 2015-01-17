@@ -49,7 +49,6 @@ var (
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
 
 	mavenRepositoryClient maventools.Client
-	doMavenRepoManagement bool
 
 	version   string
 	commit    string
@@ -73,7 +72,7 @@ func main() {
 		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 	}
 
-	doMavenRepoManagement = *doNexus || *doArtifactory
+	doMavenRepoManagement := *doNexus || *doArtifactory
 
 	repo, err := stash.GetRepository(*stashBaseURL, *stashUserName, *stashPassword, *jobRepositoryProjectKey, *jobRepositorySlug)
 	if err != nil {
