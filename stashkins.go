@@ -115,19 +115,19 @@ func main() {
 	// that are "managed, which means its name must begin with "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
 	for _, jobConfig := range appJobConfigs {
-		deleteJobConfig := true
 		for _, builtBranch := range jobConfig.SCM.Branches.Branch {
+			if !branchIsManaged(builtBranch.Name) {
+				continue
+			}
+			deleteJobConfig := true
 			for stashBranch, _ := range stashBranches {
-				if !branchIsManaged(stashBranch) {
-					continue
-				}
 				if strings.HasSuffix(builtBranch.Name, stashBranch) {
 					deleteJobConfig = false
 				}
 			}
-		}
-		if deleteJobConfig {
-			obsoleteJobs = append(obsoleteJobs, jobConfig)
+			if deleteJobConfig {
+				obsoleteJobs = append(obsoleteJobs, jobConfig)
+			}
 		}
 	}
 	if len(obsoleteJobs) > 0 {
@@ -294,7 +294,7 @@ func mavenRepoIDPartCleaner(b string) string {
 }
 
 func branchIsManaged(stashBranch string) bool {
-	return strings.HasPrefix(stashBranch, "feature/")
+	return strings.Contains(stashBranch, "feature/")
 }
 
 func validateCommandLineArguments() {
