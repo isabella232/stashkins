@@ -194,6 +194,7 @@ func main() {
 	// Create missing Jenkins jobs
 	log.Printf("Number of missing jobs: %d\n", len(missingJobs))
 	for _, branch := range missingJobs {
+		// For a branch feature/12, branchType will be "feature" and branchSuffix will be "12"
 		branchType, branchSuffix := suffixer(branch)
 
 		// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
