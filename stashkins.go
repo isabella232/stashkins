@@ -89,7 +89,7 @@ func main() {
 	}
 
 	// Jenkins jobs which build against a branch under the Git URL
-	appJobConfigs := make([]jenkins.JobConfig, 0)
+	targetJobs := make([]jenkins.JobConfig, 0)
 	for _, job := range allJobs {
 		jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
 		if err != nil {
@@ -101,7 +101,7 @@ func main() {
 				log.Printf("Found a job Git http URL.  This is not supported: %s\n", remoteCfg.URL)
 			}
 			if remoteCfg.URL == jobRepositoryURL {
-				appJobConfigs = append(appJobConfigs, jobConfig)
+				targetJobs = append(targetJobs, jobConfig)
 			}
 		}
 	}
@@ -114,7 +114,7 @@ func main() {
 	// Find branches Jenkins is building that no longer exist in Stash.  The jobs that are considered obsolete must have corresponding Stash branches
 	// that are "managed, which means its name must begin with "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
-	for _, jobConfig := range appJobConfigs {
+	for _, jobConfig := range targetJobs {
 		for _, builtBranch := range jobConfig.SCM.Branches.Branch {
 			if !branchIsManaged(builtBranch.Name) {
 				continue
@@ -164,7 +164,7 @@ func main() {
 			continue
 		}
 		missingJob := true
-		for _, jobConfig := range appJobConfigs {
+		for _, jobConfig := range targetJobs {
 			for _, builtBranch := range jobConfig.SCM.Branches.Branch {
 				if strings.HasSuffix(builtBranch.Name, branch) {
 					missingJob = false
