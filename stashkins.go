@@ -97,7 +97,7 @@ func main() {
 		log.Fatalf("stashkins.main get jobs error: %v\n", err)
 	}
 
-	// Filter on jobs that build against a branch of the specified git repository
+	// Filter on jobs that build against the specified git repository
 	targetJobs := make([]jenkins.JobConfig, 0)
 	for _, job := range allJobs {
 		jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
@@ -114,21 +114,7 @@ func main() {
 	// Find branches Jenkins is building that no longer exist in Stash.  The branch the job is building must contain "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
 	for _, jobConfig := range targetJobs {
-		if len(jobConfig.SCM.Branches.Branch) != 1 {
-			log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
-			continue
-		}
-		builtBranch := jobConfig.SCM.Branches.Branch[0]
-		if !branchIsManaged(builtBranch.Name) {
-			continue
-		}
-		deleteJobConfig := true
-		for stashBranch, _ := range stashBranches {
-			if strings.HasSuffix(builtBranch.Name, stashBranch) {
-				deleteJobConfig = false
-			}
-		}
-		if deleteJobConfig {
+		if isJobObsolete(jobConfig, stashBranches) {
 			obsoleteJobs = append(obsoleteJobs, jobConfig)
 		}
 	}
@@ -320,4 +306,22 @@ func isTargetJob(jobName string, remoteConfigs jenkins.UserRemoteConfigs, jobRep
 		return false
 	}
 	return remoteCfg.URL == jobRepositoryURL
+}
+
+func isJobObsolete(jobConfig jenkins.JobConfig, stashBranches map[string]stash.Branch) bool {
+	if len(jobConfig.SCM.Branches.Branch) != 1 {
+		log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
+		return false
+	}
+	builtBranch := jobConfig.SCM.Branches.Branch[0]
+	if !branchIsManaged(builtBranch.Name) {
+		return false
+	}
+	deleteJobConfig := true
+	for stashBranch, _ := range stashBranches {
+		if strings.HasSuffix(builtBranch.Name, stashBranch) {
+			deleteJobConfig = false
+		}
+	}
+	return deleteJobConfig
 }
