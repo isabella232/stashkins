@@ -104,18 +104,9 @@ func main() {
 		if err != nil {
 			// This probably means the job config is not a maven job.
 			log.Printf("stashkins.main Jenkins GetJobConfig error (not a Maven job?) for job %s: %v.  Skipping.\n", job.Name, err)
-		}
-		if len(jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig) != 1 {
-			log.Printf("The job %s does not have exactly one UserRemoteConfig.  Skipping.\n", job.Name)
 			continue
 		}
-
-		remoteCfg := jobConfig.SCM.UserRemoteConfigs.UserRemoteConfig[0]
-		if strings.HasPrefix(remoteCfg.URL, "http") {
-			log.Printf("Job %s references an HTTP Git URL.  Only SSH Git URLs are supported.\n", job.Name)
-			continue
-		}
-		if remoteCfg.URL == jobRepositoryURL {
+		if isTargetJob(jobConfig.JobName, jobConfig.SCM.UserRemoteConfigs, jobRepositoryURL) {
 			targetJobs = append(targetJobs, jobConfig)
 		}
 	}
@@ -316,4 +307,17 @@ func validateCommandLineArguments() {
 	if (*doNexus || *doArtifactory) && (*mavenBaseURL == "" || *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
 		log.Fatalf("maven-repo-base-url, maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
 	}
+}
+
+func isTargetJob(jobName string, remoteConfigs jenkins.UserRemoteConfigs, jobRepositoryURL string) bool {
+	if len(remoteConfigs.UserRemoteConfig) != 1 {
+		log.Printf("The job %s does not have exactly one UserRemoteConfig.  Skipping.\n", jobName)
+		return false
+	}
+	remoteCfg := remoteConfigs.UserRemoteConfig[0]
+	if strings.HasPrefix(remoteCfg.URL, "http") {
+		log.Printf("Job %s references an HTTP Git URL.  Only SSH Git URLs are supported.\n", jobName)
+		return false
+	}
+	return remoteCfg.URL == jobRepositoryURL
 }
