@@ -114,7 +114,7 @@ func main() {
 	// Find branches Jenkins is building that no longer exist in Stash.  The branch the job is building must contain "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
 	for _, jobConfig := range targetJobs {
-		if isJobObsolete(jobConfig, stashBranches) {
+		if shouldDeleteJob(jobConfig, stashBranches) {
 			obsoleteJobs = append(obsoleteJobs, jobConfig)
 		}
 	}
@@ -149,21 +149,7 @@ func main() {
 	// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.  The outstanding Stash branch must contain "feature/".
 	branchesNeedingBuilding := make([]string, 0)
 	for branch, _ := range stashBranches {
-		if !branchIsManaged(branch) {
-			continue
-		}
-		missingJob := true
-		for _, jobConfig := range targetJobs {
-			if len(jobConfig.SCM.Branches.Branch) != 1 {
-				log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
-				continue
-			}
-			builtBranch := jobConfig.SCM.Branches.Branch[0]
-			if strings.HasSuffix(builtBranch.Name, branch) {
-				missingJob = false
-			}
-		}
-		if missingJob {
+		if shouldCreateJob(targetJobs, branch) {
 			branchesNeedingBuilding = append(branchesNeedingBuilding, branch)
 		}
 	}
@@ -308,7 +294,7 @@ func isTargetJob(jobName string, remoteConfigs jenkins.UserRemoteConfigs, jobRep
 	return remoteCfg.URL == jobRepositoryURL
 }
 
-func isJobObsolete(jobConfig jenkins.JobConfig, stashBranches map[string]stash.Branch) bool {
+func shouldDeleteJob(jobConfig jenkins.JobConfig, stashBranches map[string]stash.Branch) bool {
 	if len(jobConfig.SCM.Branches.Branch) != 1 {
 		log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
 		return false
@@ -324,4 +310,21 @@ func isJobObsolete(jobConfig jenkins.JobConfig, stashBranches map[string]stash.B
 		}
 	}
 	return deleteJobConfig
+}
+
+func shouldCreateJob(targetJobs []jenkins.JobConfig, branch string) bool {
+	if !branchIsManaged(branch) {
+		return false
+	}
+	for _, jobConfig := range targetJobs {
+		if len(jobConfig.SCM.Branches.Branch) != 1 {
+			log.Printf("The job %s builds more than one branch, which is unsupported.  Skipping job.\n", jobConfig.JobName)
+			return false
+		}
+		builtBranch := jobConfig.SCM.Branches.Branch[0]
+		if strings.HasSuffix(builtBranch.Name, branch) {
+			return false
+		}
+	}
+	return true
 }

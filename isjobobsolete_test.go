@@ -13,7 +13,7 @@ func TestJobNotObsolete(t *testing.T) {
 	}
 	jobConfig := jenkins.JobConfig{SCM: jenkins.Scm{Branches: jenkins.Branches{Branch: builtBranches}}}
 	stashBranches := map[string]stash.Branch{"feature/1": stash.Branch{}}
-	if isJobObsolete(jobConfig, stashBranches) {
+	if shouldDeleteJob(jobConfig, stashBranches) {
 		t.Fatalf("Want false\n")
 	}
 }
@@ -24,7 +24,7 @@ func TestJobNotObsoleteBranchUnmanaged(t *testing.T) {
 	}
 	jobConfig := jenkins.JobConfig{SCM: jenkins.Scm{Branches: jenkins.Branches{Branch: builtBranches}}}
 	stashBranches := map[string]stash.Branch{"feature/1": stash.Branch{}}
-	if isJobObsolete(jobConfig, stashBranches) {
+	if shouldDeleteJob(jobConfig, stashBranches) {
 		t.Fatalf("Want false\n")
 	}
 }
@@ -35,7 +35,7 @@ func TestJobObsolete(t *testing.T) {
 	}
 	jobConfig := jenkins.JobConfig{SCM: jenkins.Scm{Branches: jenkins.Branches{Branch: builtBranches}}}
 	stashBranches := map[string]stash.Branch{"feature/2": stash.Branch{}}
-	if !isJobObsolete(jobConfig, stashBranches) {
+	if !shouldDeleteJob(jobConfig, stashBranches) {
 		t.Fatalf("Want false\n")
 	}
 }
@@ -47,7 +47,7 @@ func TestJobBuildsMultipleBranches(t *testing.T) {
 	}
 	jobConfig := jenkins.JobConfig{SCM: jenkins.Scm{Branches: jenkins.Branches{Branch: builtBranches}}}
 	stashBranches := map[string]stash.Branch{}
-	if isJobObsolete(jobConfig, stashBranches) {
+	if shouldDeleteJob(jobConfig, stashBranches) {
 		t.Fatalf("Want false\n")
 	}
 }
