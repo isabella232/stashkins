@@ -130,18 +130,17 @@ func main() {
 
 		// Maven repo management
 		if doMavenRepoManagement {
-			for _, branch := range job.SCM.Branches.Branch {
-				var branchRepresentation string
-				if strings.HasPrefix(branch.Name, "origin/") {
-					branchRepresentation = branch.Name[len("origin/"):]
-				}
-				branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
-				repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
-				if _, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
-					log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
-				} else {
-					log.Printf("Deleted Maven repository %v\n", repositoryID)
-				}
+			branch := job.SCM.Branches.Branch[0]
+			var branchRepresentation string
+			if strings.HasPrefix(branch.Name, "origin/") {
+				branchRepresentation = branch.Name[len("origin/"):]
+			}
+			branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
+			repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
+			if _, err := mavenRepositoryClient.DeleteRepository(repositoryID); err != nil {
+				log.Printf("stashkins.main failed to delete Maven repository %s: %+v\n", repositoryID, err)
+			} else {
+				log.Printf("Deleted Maven repository %v\n", repositoryID)
 			}
 		}
 	}
