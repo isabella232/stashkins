@@ -145,7 +145,7 @@ func main() {
 		}
 	}
 
-	// Find missing jobs.  This is characterized as a branch in Stash that is not built by any job.  The outstanding Stash branch must contain "feature/".
+	// Find outstanding branches, the basis of which are Stash branches whose names contains "feature/" that are not being built by any job.
 	branchesNeedingBuilding := make([]string, 0)
 	for branch, _ := range stashBranches {
 		if shouldCreateJob(targetJobs, branch) {
@@ -153,7 +153,7 @@ func main() {
 		}
 	}
 
-	// Create missing Jenkins jobs
+	// Create Jenkins jobs to build outstanding branches
 	log.Printf("Number of missing jobs: %d\n", len(branchesNeedingBuilding))
 	for _, branch := range branchesNeedingBuilding {
 		// For a branch feature/12, branchType will be "feature" and branchSuffix will be "12"
