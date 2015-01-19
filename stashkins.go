@@ -125,7 +125,7 @@ func main() {
 		if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
 			log.Printf("stashkins.main error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
 		} else {
-			log.Printf("Deleting obsolete job %+v\n", job.JobName)
+			log.Printf("Deleted obsolete job %+v\n", job.JobName)
 		}
 
 		// Maven repo management
@@ -194,7 +194,7 @@ func main() {
 		if err != nil {
 			log.Printf("stashkins.main failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 		} else {
-			log.Printf("created job %s\n", jobDescr.JobName)
+			log.Printf("Created job %s\n", jobDescr.JobName)
 		}
 
 		// Maven repo management
