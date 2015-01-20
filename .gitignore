@@ -1,4 +1,5 @@
 stashkins-darwin-amd64
 stashkins-linux-amd64
+stashkins-windows-amd64
 *.deb
 stashkins
