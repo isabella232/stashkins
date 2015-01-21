@@ -68,15 +68,13 @@ func main() {
 
 	validateCommandLineArguments()
 
+	stashClient := stash.NewClient(*stashUserName, *stashPassword, *stashBaseURL)
+	jenkinsClient := jenkins.NewClient(*jenkinsBaseURL)
 	if *doNexus {
 		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 	}
 
 	doMavenRepoManagement := *doNexus || *doArtifactory
-
-	stashClient := stash.NewClient(*stashBaseURL, *stashUserName, *stashPassword)
-
-	jenkinsClient := jenkins.NewClient(*jenkinsBaseURL)
 
 	// Fetch repository metadata
 	repo, err := stashClient.GetRepository(*jobRepositoryProjectKey, *jobRepositorySlug)
