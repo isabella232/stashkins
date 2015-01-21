@@ -119,7 +119,8 @@ func TestGetJobConfig(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	cfg, err := GetJobConfig(testServer.URL, "thejob")
+	jenkinsClient := NewClient(testServer.URL)
+	cfg, err := jenkinsClient.GetJobConfig("thejob")
 	if err != nil {
 		t.Fatalf("GetJobConfig() not expecting an error, but received: %v\n", err)
 	}
@@ -163,4 +164,25 @@ func TestGetJobConfig(t *testing.T) {
 	if cfg.SCM.Branches.Branch[0].Name != "origin/develop" {
 		t.Fatalf("Wanted SCM.Branches.Branch[0].Name == origin/develop but found %d\n", cfg.SCM.Branches.Branch[0].Name)
 	}
+}
+
+func TestGetJobConfig500(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		url := *r.URL
+		if url.Path != "/job/thejob/config.xml" {
+			t.Fatalf("GetJobs() URL path expected to end with config.xml: %s\n", url.Path)
+		}
+		if r.Header.Get("Accept") != "application/xml" {
+			t.Fatalf("GetJobs() expected request Accept header to be application/xml but found %s\n", r.Header.Get("Accept"))
+		}
+		w.WriteHeader(500)
+	}))
+	defer testServer.Close()
+
+	jenkinsClient := NewClient(testServer.URL)
+
+	if _, err := jenkinsClient.GetJobConfig("thejob"); err == nil {
+		t.Fatalf("GetJobConfig() expecting an error, but received none\n")
+	}
+
 }

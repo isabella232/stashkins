@@ -4,11 +4,11 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/xoom/jenkins",
-			"Rev": "19af8350723847d3d8fcae7f22e792d577bd20c1"
+			"Rev": "6eebecc0b2333a5d8384bc8e181a232f65bb2eb0"
 		},
 		{
 			"ImportPath": "github.com/xoom/stash",
-			"Rev": "fe8fc197154b965abb5f7006dae5e43900a8e198"
+			"Rev": "578360b4e114b7c59a812512c5229631cd00248e"
 		},
 		{
 			"ImportPath": "github.com/xoom/maventools/nexus",

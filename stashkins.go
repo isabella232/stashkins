@@ -74,8 +74,12 @@ func main() {
 
 	doMavenRepoManagement := *doNexus || *doArtifactory
 
+	stashClient := stash.NewClient(*stashBaseURL, *stashUserName, *stashPassword)
+
+	jenkinsClient := jenkins.NewClient(*jenkinsBaseURL)
+
 	// Fetch repository metadata
-	repo, err := stash.GetRepository(*stashBaseURL, *stashUserName, *stashPassword, *jobRepositoryProjectKey, *jobRepositorySlug)
+	repo, err := stashClient.GetRepository(*jobRepositoryProjectKey, *jobRepositorySlug)
 	if err != nil {
 		log.Fatalf("stashkins.main GetRepository error %v\n", err)
 	}
@@ -86,13 +90,13 @@ func main() {
 	log.Printf("Analyzing repository %s...\n", jobRepositoryURL)
 
 	// Fetch all branches for this repository
-	stashBranches, err := stash.GetBranches(*stashBaseURL, *stashUserName, *stashPassword, repo.Project.Key, repo.Slug)
+	stashBranches, err := stashClient.GetBranches(repo.Project.Key, repo.Slug)
 	if err != nil {
 		log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", jobRepositoryURL, err)
 	}
 
 	// Fetch all Jenkins jobs
-	allJobs, err := jenkins.GetJobs(*jenkinsBaseURL)
+	allJobs, err := jenkinsClient.GetJobs()
 	if err != nil {
 		log.Fatalf("stashkins.main get jobs error: %v\n", err)
 	}
@@ -100,7 +104,7 @@ func main() {
 	// Filter on jobs that build against the specified git repository
 	targetJobs := make([]jenkins.JobConfig, 0)
 	for _, job := range allJobs {
-		jobConfig, err := jenkins.GetJobConfig(*jenkinsBaseURL, job.Name)
+		jobConfig, err := jenkinsClient.GetJobConfig(job.Name)
 		if err != nil {
 			// This probably means the job config is not a maven job.
 			log.Printf("stashkins.main Jenkins GetJobConfig error (not a Maven job?) for job %s: %v.  Skipping.\n", job.Name, err)
@@ -122,7 +126,7 @@ func main() {
 	// Remove obsolete jobs
 	log.Printf("Number of obsolete jobs: %d\n", len(obsoleteJobs))
 	for _, job := range obsoleteJobs {
-		if err := jenkins.DeleteJob(*jenkinsBaseURL, job.JobName); err != nil {
+		if err := jenkinsClient.DeleteJob(job.JobName); err != nil {
 			log.Printf("stashkins.main error deleting obsolete job %s, continuing:  %+v\n", job.JobName, err)
 		} else {
 			log.Printf("Deleted obsolete job %+v\n", job.JobName)
@@ -190,7 +194,7 @@ func main() {
 		templateString := string(result.Bytes())
 
 		// Create the job
-		err = jenkins.CreateJob(*jenkinsBaseURL, jobDescr.JobName, templateString)
+		err = jenkinsClient.CreateJob(jobDescr.JobName, templateString)
 		if err != nil {
 			log.Printf("stashkins.main failed to create job %+v, continuing...: error==%+v\n", jobDescr, err)
 		} else {

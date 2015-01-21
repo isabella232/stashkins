@@ -67,7 +67,8 @@ func TestGetJobsNoError(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	jobs, err := GetJobs(testServer.URL)
+	jenkinsClient := NewClient(testServer.URL)
+	jobs, err := jenkinsClient.GetJobs()
 	if err != nil {
 		t.Fatalf("GetJobs() not expecting an error, but received: %v\n", err)
 	}
@@ -82,5 +83,24 @@ func TestGetJobsNoError(t *testing.T) {
 		if !present {
 			t.Fatalf("GetJobs() expected to contain %s, but did not\n", p)
 		}
+	}
+}
+
+func TestGetJobs500(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		url := *r.URL
+		if url.Path != "/api/json/jobs" {
+			t.Fatalf("GetJobs() URL path expected to be /api/json/jobs but found %s\n", url.Path)
+		}
+		if r.Header.Get("Accept") != "application/json" {
+			t.Fatalf("GetJobs() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
+		}
+		w.WriteHeader(500)
+	}))
+	defer testServer.Close()
+
+	jenkinsClient := NewClient(testServer.URL)
+	if _, err := jenkinsClient.GetJobs(); err == nil {
+		t.Fatalf("GetJobs() expecting an error, but received none\n")
 	}
 }
