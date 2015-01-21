@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"text/template"
@@ -68,8 +69,18 @@ func main() {
 
 	validateCommandLineArguments()
 
-	stashClient := stash.NewClient(*stashUserName, *stashPassword, *stashBaseURL)
-	jenkinsClient := jenkins.NewClient(*jenkinsBaseURL)
+	stashURL, err := url.Parse(*stashBaseURL)
+	if err != nil {
+		log.Fatalf("Error parsing Stash base URL: %v\n", err)
+	}
+	stashClient := stash.NewClient(*stashUserName, *stashPassword, stashURL)
+
+	jenkinsURL, err := url.Parse(*jenkinsBaseURL)
+	if err != nil {
+		log.Fatalf("Error parsing Jenkins base URL: %v\n", err)
+	}
+	jenkinsClient := jenkins.NewClient(jenkinsURL)
+
 	if *doNexus {
 		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 	}
