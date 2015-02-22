@@ -115,8 +115,9 @@ func main() {
 	for _, job := range allJobs {
 		jobConfig, err := jenkinsClient.GetJobConfig(job.Name)
 		if err != nil {
-			// This probably means the job config is not a maven job.
-			log.Printf("stashkins.main Jenkins GetJobConfig error (not a Maven job?) for job %s: %v.  Skipping.\n", job.Name, err)
+			if !isIgnoreable(err) {
+				log.Printf("stashkins.main Jenkins GetJobConfig error for job %s: %v.  Skipping.\n", job.Name, err)
+			}
 			continue
 		}
 		if isTargetJob(jobConfig.JobName, jobConfig.SCM.UserRemoteConfigs, jobRepositoryURL) {
@@ -339,4 +340,11 @@ func shouldCreateJob(targetJobs []jenkins.JobConfig, branch string) bool {
 		}
 	}
 	return true
+}
+
+// I hate resorting to this, but there are no better solutions to suppress benign but scary look unmarshaling errors
+// on jobs that are otherwise perfectly valid but are not maven jobs.  If they are not maven jobs, stashkins does not
+// care about them.
+func isIgnoreable(err error) bool {
+	return strings.HasPrefix(err.Error(), "expected element type <maven2-moduleset> but have")
 }
