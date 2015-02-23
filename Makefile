@@ -29,5 +29,14 @@ clean:
 	go clean
 	rm -f *.deb
 
-package:
-	which fpm && fpm -s dir -t deb -v $(VERSION) -n stashkins -a amd64 -m"Mark Petrovic <mark.petrovic@xoom.com>" --prefix /usr/local/bin --description "https://github.com/xoom/stashkins" stashkins-linux-amd64
+package: all
+	mkdir -p packaging
+	cp $(NAME)-linux-$(ARCH) packaging/$(NAME)
+	fpm -s dir -t deb -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
+	fpm -s dir -t rpm --rpm-os linux -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
+
+clean: 
+	go clean
+	rm -f *.deb *.rpm
+	rm -rf packaging
+	rm -f $(NAME)-darwin-$(ARCH) $(NAME)-linux-$(ARCH) $(NAME)-windows-$(ARCH).exe
