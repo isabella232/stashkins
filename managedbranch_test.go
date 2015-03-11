@@ -4,16 +4,17 @@ import "testing"
 
 func TestBranchIsManaged(t *testing.T) {
 	if branchIsManaged("master") {
-		t.Fatalf("want false but got true\n")
+		t.Fatalf("want master managed == false but got true\n")
 	}
-	if branchIsManaged("develop") {
-		t.Fatalf("want false but got true\n")
+	if !branchIsManaged("develop") {
+		t.Fatalf("want develop managed == true but got true\n")
 	}
 
 	if !branchIsManaged("feature/somebranch") {
-		t.Fatalf("want true but got false\n")
+		t.Fatalf("want feature/somebranch managed == true but got false\n")
 	}
+
 	if !branchIsManaged("origin/feature/somebranch") {
-		t.Fatalf("want true but got false\n")
+		t.Fatalf("want origin/feature/somebranch managed == true but got false\n")
 	}
 }

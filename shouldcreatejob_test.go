@@ -6,7 +6,7 @@ import (
 	"github.com/xoom/jenkins"
 )
 
-func TestShouldCreateJob(t *testing.T) {
+func TestCreateLackingJob(t *testing.T) {
 	builtBranches := []jenkins.Branch{
 		jenkins.Branch{Name: "origin/feature/1"},
 	}
@@ -18,7 +18,7 @@ func TestShouldCreateJob(t *testing.T) {
 	}
 }
 
-func TestShouldCreateJobBeingBuilt(t *testing.T) {
+func TestDoNotCreateJobAlreadyBeingBuilt(t *testing.T) {
 	builtBranches := []jenkins.Branch{
 		jenkins.Branch{Name: "origin/feature/1"},
 	}
@@ -30,7 +30,7 @@ func TestShouldCreateJobBeingBuilt(t *testing.T) {
 	}
 }
 
-func TestShouldCreateJobMultpleBranches(t *testing.T) {
+func TestDoNotConsiderJobBuildingMultipleBranches(t *testing.T) {
 	builtBranches := []jenkins.Branch{
 		jenkins.Branch{Name: "origin/feature/1"},
 		jenkins.Branch{Name: "origin/feature/2"},
@@ -43,7 +43,7 @@ func TestShouldCreateJobMultpleBranches(t *testing.T) {
 	}
 }
 
-func TestShouldNotCreateJobUnmanaged(t *testing.T) {
+func TestDoNotCreateJobForUnmanagedBranch(t *testing.T) {
 	builtBranches := []jenkins.Branch{
 		jenkins.Branch{},
 	}

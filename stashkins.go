@@ -19,11 +19,14 @@ import (
 
 // JobTemplate is used to populate a template XML Jenkins job config file with appropriate values for prospective new jobs
 type JobTemplate struct {
-	JobName                             string // code in ssh://git@example.com:9999/teamp/code.git
-	Description                         string // mashup of repository URL and branch name
-	BranchName                          string // feature/PROJ-999, as in feature/PROJ-999
-	RepositoryURL                       string // ssh://git@example.com:9999/teamp/code.git
-	NexusRepositoryType                 string // if branch == master then releases else snapshots
+	JobName       string // code in ssh://git@example.com:9999/teamp/code.git
+	Description   string // mashup of repository URL and branch name
+	BranchName    string // feature/PROJ-999, as in feature/PROJ-999
+	RepositoryURL string // ssh://git@example.com:9999/teamp/code.git
+
+	// todo obsolete? this needs to be cleaned up
+	NexusRepositoryType string // if branch == master then releases else snapshots
+
 	PerBranchMavenSnapshotRepositoryID  string // the Maven repository ID to which to publish this job's artifacts
 	PerBranchMavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
 }
@@ -32,6 +35,7 @@ var (
 	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
+	// todo this will be built from Project Key + Slug and fetched from git over http
 	jobTemplateFile = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
 
 	jobRepositoryProjectKey = flag.String("repository-project-key", "", "The Stash Project Key for the job-repository of interest.  For example, PLAYG.")
@@ -143,8 +147,8 @@ func main() {
 		}
 
 		// Maven repo management
-		if doMavenRepoManagement {
-			branch := job.SCM.Branches.Branch[0]
+		branch := job.SCM.Branches.Branch[0]
+		if doMavenRepoManagement && isFeatureBranch(branch.Name) {
 			var branchRepresentation string
 			if strings.HasPrefix(branch.Name, "origin/") {
 				branchRepresentation = branch.Name[len("origin/"):]
@@ -212,7 +216,7 @@ func main() {
 		}
 
 		// Maven repo management
-		if doMavenRepoManagement {
+		if doMavenRepoManagement && isFeatureBranch(branch) {
 			branchRepresentation := strings.Replace(branch, "/", "_", -1)
 			repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
 			if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
@@ -269,7 +273,11 @@ func mavenRepoIDPartCleaner(b string) string {
 }
 
 func branchIsManaged(stashBranch string) bool {
-	return strings.Contains(stashBranch, "feature/")
+	return isFeatureBranch(stashBranch) || stashBranch == "develop"
+}
+
+func isFeatureBranch(branchName string) bool {
+	return strings.Contains(branchName, "feature/")
 }
 
 func validateCommandLineArguments() {
