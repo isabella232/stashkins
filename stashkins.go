@@ -19,24 +19,19 @@ import (
 
 // JobTemplate is used to populate a template XML Jenkins job config file with appropriate values for prospective new jobs
 type JobTemplate struct {
-	JobName       string // code in ssh://git@example.com:9999/teamp/code.git
-	Description   string // mashup of repository URL and branch name
-	BranchName    string // feature/PROJ-999, as in feature/PROJ-999
-	RepositoryURL string // ssh://git@example.com:9999/teamp/code.git
-
-	// todo obsolete? this needs to be cleaned up
-	NexusRepositoryType string // if branch == master then releases else snapshots
-
-	PerBranchMavenSnapshotRepositoryID  string // the Maven repository ID to which to publish this job's artifacts
-	PerBranchMavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
+	JobName                    string // code in ssh://git@example.com:9999/teamp/code.git
+	Description                string // mashup of repository URL and branch name
+	BranchName                 string // feature/PROJ-999, as in feature/PROJ-999
+	RepositoryURL              string // ssh://git@example.com:9999/teamp/code.git
+	MavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
 }
 
 var (
 	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
-	// todo this will be built from Project Key + Slug and fetched from git over http
-	jobTemplateFile = flag.String("job-template-file", "job-template.xml", "Jenkins job template file.")
+	jobTemplateBranch = flag.String("job-template-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
+	jobTemplateFile   = flag.String("job-template-file", "", "Jenkins job template file. If empty, the template will be fetched from Stash in the template repository.")
 
 	jobRepositoryProjectKey = flag.String("repository-project-key", "", "The Stash Project Key for the job-repository of interest.  For example, PLAYG.")
 	jobRepositorySlug       = flag.String("repository-slug", "", "The Stash repository 'slug' for the job-repository of interest.  For example, 'trunk'.")
@@ -48,8 +43,6 @@ var (
 	mavenUsername          = flag.String("maven-repo-username", "", "Username for Maven repository management")
 	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management")
 	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
-	doNexus                = flag.Bool("do-nexus", false, "Do Maven repository management against Sonatype Nexus.  Precludes do-artifactory.")
-	doArtifactory          = flag.Bool("do-artifactory", false, "Do Maven repository management against JFrog Artifactory.  Precludes do-nexus.")
 
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
 
@@ -79,17 +72,29 @@ func main() {
 	}
 	stashClient := stash.NewClient(*stashUserName, *stashPassword, stashURL)
 
+	var jobTemplateBuffer []byte
+	if *jobTemplateFile != "" {
+		var err error
+		jobTemplateBuffer, err = ioutil.ReadFile(*jobTemplateFile)
+		if err != nil {
+			log.Fatalf("stashkins.main cannot read job template file %s: %v\n", *jobTemplateFile, err)
+		}
+	} else {
+		var err error
+		filePath := fmt.Sprintf("%s/%s/template.xml", strings.ToLower(*jobRepositoryProjectKey), strings.ToLower(*jobRepositorySlug))
+		jobTemplateBuffer, err = stashClient.GetRawFile("INF", "stashkins-templates", filePath, *jobTemplateBranch)
+		if err != nil {
+			log.Fatalf("stashkins.main cannot fetch job template file from Stash:  %v\n", err)
+		}
+	}
+
 	jenkinsURL, err := url.Parse(*jenkinsBaseURL)
 	if err != nil {
 		log.Fatalf("Error parsing Jenkins base URL: %v\n", err)
 	}
 	jenkinsClient := jenkins.NewClient(jenkinsURL)
 
-	if *doNexus {
-		mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
-	}
-
-	doMavenRepoManagement := *doNexus || *doArtifactory
+	mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 
 	// Fetch repository metadata
 	repo, err := stashClient.GetRepository(*jobRepositoryProjectKey, *jobRepositorySlug)
@@ -148,7 +153,7 @@ func main() {
 
 		// Maven repo management
 		branch := job.SCM.Branches.Branch[0]
-		if doMavenRepoManagement && isFeatureBranch(branch.Name) {
+		if isFeatureBranch(branch.Name) {
 			var branchRepresentation string
 			if strings.HasPrefix(branch.Name, "origin/") {
 				branchRepresentation = branch.Name[len("origin/"):]
@@ -174,32 +179,23 @@ func main() {
 	// Create Jenkins jobs to build outstanding branches
 	log.Printf("Number of missing jobs: %d\n", len(branchesNeedingBuilding))
 	for _, branch := range branchesNeedingBuilding {
-		// For a branch feature/12, branchType will be "feature" and branchSuffix will be "12"
-		branchType, branchSuffix := suffixer(branch)
+		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "12".
+		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
+		branchBaseName, branchSuffix := suffixer(branch)
 
-		// Forms the deploy-target Maven repository ID, from which a custom settings.xml can be crafted.
-		mavenSnapshotRepositoryID := mavenRepositoryID(repo.Project.Key, repo.Slug, branch)
-		mavenSnapshotRepositoryURL := fmt.Sprintf("%s/content/repositories/%s", *mavenBaseURL, mavenSnapshotRepositoryID)
+		mavenSnapshotRepositoryURL := buildMavenRepositoryURL(*mavenBaseURL, repo.Project.Key, repo.Slug, branch)
 
 		jobDescr := JobTemplate{
-			JobName:                             repo.Slug + "-continuous-" + branchType + branchSuffix,
-			Description:                         "This is a continuous build for " + repo.Slug + ", branch " + branch,
-			BranchName:                          branch,
-			RepositoryURL:                       jobRepositoryURL,
-			NexusRepositoryType:                 "snapshots",
-			PerBranchMavenSnapshotRepositoryID:  mavenSnapshotRepositoryID,
-			PerBranchMavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
+			JobName:                    repo.Slug + "-continuous-" + branchBaseName + branchSuffix,
+			Description:                "This is a continuous build for " + repo.Slug + ", branch " + branch,
+			BranchName:                 branch,
+			RepositoryURL:              jobRepositoryURL,
+			MavenSnapshotRepositoryURL: mavenSnapshotRepositoryURL,
 		}
 
 		// Prepare the job template
-		data, err := ioutil.ReadFile(*jobTemplateFile)
-		if err != nil {
-			log.Fatalf("stashkins.main cannot read job template file %s: %v\n", *jobTemplateFile, err)
-		}
-		jobTemplate, err := template.New("jobconfig").Parse(string(data))
-		if err != nil {
-			log.Fatalf("stashkins.main cannot parse job template file %s: %v\n", *jobTemplateFile, err)
-		}
+		jobTemplate, err := template.New("jobconfig").Parse(string(jobTemplateBuffer))
+
 		result := bytes.NewBufferString("")
 		err = jobTemplate.Execute(result, jobDescr)
 		if err != nil {
@@ -216,7 +212,7 @@ func main() {
 		}
 
 		// Maven repo management
-		if doMavenRepoManagement && isFeatureBranch(branch) {
+		if isFeatureBranch(branch) {
 			branchRepresentation := strings.Replace(branch, "/", "_", -1)
 			repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", repo.Project.Key, repo.Slug, branchRepresentation))
 			if present, err := mavenRepositoryClient.RepositoryExists(repositoryID); err == nil && !present {
@@ -250,6 +246,11 @@ func suffixer(branch string) (string, string) {
 	s := strings.Split(branch, "/")
 	prefix := s[0]
 	var suffix string
+
+	if len(s) == 1 {
+		return prefix, suffix
+	}
+
 	if len(s) == 2 {
 		suffix = s[1]
 	} else {
@@ -257,6 +258,18 @@ func suffixer(branch string) (string, string) {
 		suffix = strings.Replace(suffix, "/", "-", -1)
 	}
 	return prefix, "-" + suffix
+}
+
+func buildMavenRepositoryURL(nexusBaseURL, gitProjectKey, gitRepositorySlug, gitBranch string) string {
+	var mavenSnapshotRepositoryURL string
+	if gitBranch == "develop" {
+		mavenSnapshotRepositoryURL = fmt.Sprintf("%s/content/repositories/snapshots", nexusBaseURL)
+	} else {
+		// For feature/ branches, use per-branch repositories
+		mavenSnapshotRepositoryID := mavenRepositoryID(gitProjectKey, gitRepositorySlug, gitBranch)
+		mavenSnapshotRepositoryURL = fmt.Sprintf("%s/content/repositories/%s", nexusBaseURL, mavenSnapshotRepositoryID)
+	}
+	return mavenSnapshotRepositoryURL
 }
 
 // Form the maven repository ID from project parts.  Each part must be cleaned and made URL-safe because the result will form part of an HTTP URL.
@@ -289,15 +302,7 @@ func validateCommandLineArguments() {
 		log.Fatalf("repository-slug must be set.\n")
 	}
 
-	if *doNexus && *doArtifactory {
-		log.Fatalf("Only one of do-nexus or do-artifactory may be set.\n")
-	}
-
-	if *doArtifactory {
-		log.Fatalf("Artifactory is not supported yet")
-	}
-
-	if (*doNexus || *doArtifactory) && (*mavenBaseURL == "" || *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "") {
+	if *mavenBaseURL == "" || *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
 		log.Fatalf("maven-repo-base-url, maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
 	}
 }

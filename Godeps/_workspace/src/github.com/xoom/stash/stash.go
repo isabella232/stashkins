@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -18,6 +19,7 @@ type (
 		GetRepositories() (map[int]Repository, error)
 		GetBranches(projectKey, repositorySlug string) (map[string]Branch, error)
 		GetRepository(projectKey, repositorySlug string) (Repository, error)
+		GetRawFile(projectKey, repositorySlug, branch, filePath string) ([]byte, error)
 	}
 
 	Client struct {
@@ -207,6 +209,24 @@ func (client Client) GetRepository(projectKey, repositorySlug string) (Repositor
 	}
 
 	return r, nil
+}
+
+func (client Client) GetRawFile(repositoryProjectKey, repositorySlug, filePath, branch string) ([]byte, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/projects/%s/repos/%s/browse/%s?at=%s&raw", client.baseURL.String(), strings.ToLower(repositoryProjectKey), strings.ToLower(repositorySlug), filePath, branch), nil)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("stash.GetRawFile %s\n", req.URL)
+	req.SetBasicAuth(client.userName, client.password)
+
+	responseCode, data, err := consumeResponse(req)
+	if err != nil {
+		return nil, err
+	}
+	if responseCode != 200 {
+		return nil, fmt.Errorf("stash.GetRawFile() returned %d\n", responseCode)
+	}
+	return data, nil
 }
 
 func HasRepository(repositories map[int]Repository, url string) (Repository, bool) {

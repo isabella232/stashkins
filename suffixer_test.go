@@ -27,4 +27,12 @@ func TestSuffixer(t *testing.T) {
 	if b != "-b-c-d" {
 		t.Fatalf("wanted -b-c-d but found %s\n", b)
 	}
+
+	a, b = suffixer("develop")
+	if a != "develop" {
+		t.Fatalf("wanted develop but found %s\n", a)
+	}
+	if b != "" {
+		t.Fatalf("wanted empty string but found %s\n", b)
+	}
 }

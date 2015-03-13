@@ -95,7 +95,7 @@
     <publishers>
         <hudson.maven.RedeployPublisher>
             <id>xoom-snapshot</id>
-            <url>{{.PerBranchMavenSnapshotRepositoryURL}}</url>
+            <url>{{.MavenSnapshotRepositoryURL}}</url>
             <uniqueVersion>false</uniqueVersion>
             <evenIfUnstable>false</evenIfUnstable>
         </hudson.maven.RedeployPublisher>
