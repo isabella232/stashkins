@@ -18,4 +18,8 @@ func TestIsFeatureBranch(t *testing.T) {
 	if !isFeatureBranch("feature/1") {
 		t.Fatalf("Want true\n")
 	}
+
+    if isFeatureBranch("origin/feature/*") {
+        t.Fatalf("want false\n")
+    }
 }

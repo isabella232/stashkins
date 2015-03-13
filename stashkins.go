@@ -113,13 +113,13 @@ func main() {
 		log.Fatalf("stashkins.main error getting branches from Stash for repository %s: %v\n", jobRepositoryURL, err)
 	}
 
-	// Fetch all Jenkins jobs
+	// Fetch a list of all Jenkins jobs
 	allJobs, err := jenkinsClient.GetJobs()
 	if err != nil {
 		log.Fatalf("stashkins.main get jobs error: %v\n", err)
 	}
 
-	// Filter on jobs that build against the specified git repository
+	// From all jobs, find jobs that build against the specified git repository
 	targetJobs := make([]jenkins.JobConfig, 0)
 	for _, job := range allJobs {
 		jobConfig, err := jenkinsClient.GetJobConfig(job.Name)
@@ -134,7 +134,9 @@ func main() {
 		}
 	}
 
-	// Find branches Jenkins is building that no longer exist in Stash.  The branch the job is building must contain "feature/".
+	// From jobs building branches on the Git repository of interest, find branches Jenkins is building that no longer
+	// exist in Stash.  For a job to be considered for deletion, the branch name the job is building must either be
+	// "develop" or contain the string "feature/".
 	obsoleteJobs := make([]jenkins.JobConfig, 0)
 	for _, jobConfig := range targetJobs {
 		if shouldDeleteJob(jobConfig, stashBranches) {
@@ -168,7 +170,8 @@ func main() {
 		}
 	}
 
-	// Find outstanding branches, the basis of which are Stash branches whose names contains "feature/" that are not being built by any job.
+	// From jobs that are not being built, but should be based on a branch existing without a job.
+	// For a job to be considered for creation, the branch name must either be "develop" or contain the string "feature/".
 	branchesNeedingBuilding := make([]string, 0)
 	for branch, _ := range stashBranches {
 		if shouldCreateJob(targetJobs, branch) {
@@ -176,7 +179,7 @@ func main() {
 		}
 	}
 
-	// Create Jenkins jobs to build outstanding branches
+	// Create Jenkins jobs to build branches needing building.
 	log.Printf("Number of missing jobs: %d\n", len(branchesNeedingBuilding))
 	for _, branch := range branchesNeedingBuilding {
 		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "12".
@@ -290,7 +293,8 @@ func branchIsManaged(stashBranch string) bool {
 }
 
 func isFeatureBranch(branchName string) bool {
-	return strings.Contains(branchName, "feature/")
+	// Do not try to manage a branch that has an * asterisk in it, as some Jenkins branch specs might contain (origin/feature/*).
+	return strings.Contains(branchName, "feature/") && !strings.Contains(branchName, "*")
 }
 
 func validateCommandLineArguments() {
