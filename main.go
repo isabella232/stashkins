@@ -15,6 +15,7 @@ import (
 	"github.com/xoom/maventools"
 	"github.com/xoom/maventools/nexus"
 	"github.com/xoom/stash"
+	"github.com/xoom/stashkins/stashkins"
 )
 
 // JobTemplate is used to populate a template XML Jenkins job config file with appropriate values for prospective new jobs
@@ -30,14 +31,16 @@ var (
 	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
-	jobTemplateBranch = flag.String("job-template-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
-	jobTemplateFile   = flag.String("job-template-file", "", "Jenkins job template file. If empty, the template will be fetched from Stash in the template repository.")
-
+	// todo deprecated
 	jobRepositoryProjectKey = flag.String("repository-project-key", "", "The Stash Project Key for the job-repository of interest.  For example, PLAYG.")
-	jobRepositorySlug       = flag.String("repository-slug", "", "The Stash repository 'slug' for the job-repository of interest.  For example, 'trunk'.")
+	// todo deprecated
+	jobRepositorySlug = flag.String("repository-slug", "", "The Stash repository 'slug' for the job-repository of interest.  For example, 'trunk'.")
 
-	stashUserName = flag.String("stash-username", "", "Username for Stash authentication")
-	stashPassword = flag.String("stash-password", "", "Password for Stash authentication")
+	jobTemplateRepositoryURL = flag.String("template-repository-url", "", "The Stash repository where job templates are stored..")
+	jobTemplateBranch        = flag.String("job-template-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
+
+	ldapUser     = flag.String("ldap-username", "", "User capable of doing automation tasks on Stash")
+	ldapPassword = flag.String("ldap-password", "", "Password for ldapUser")
 
 	mavenBaseURL           = flag.String("maven-repo-base-url", "http://localhost:8081/nexus", "Maven repository management Base URL")
 	mavenUsername          = flag.String("maven-repo-username", "", "Username for Maven repository management")
@@ -54,8 +57,16 @@ var (
 	sdkInfo   string
 )
 
+var stashParams stashkins.WebClientParams
+var nexusParams stashkins.WebClientParams
+var jenkinsParams stashkins.WebClientParams
+var scmInfo stashkins.ScmInfo
+
 func init() {
 	flag.Parse()
+	stashParams = stashkins.WebClientParams{URL: *stashBaseURL, UserName: *ldapUser, Password: *ldapPassword}
+	jenkinsParams = stashkins.WebClientParams{URL: *jenkinsBaseURL, UserName: *ldapUser, Password: *ldapPassword}
+	nexusParams = stashkins.WebClientParams{URL: *mavenBaseURL, UserName: *mavenUsername, Password: *mavenPassword}
 }
 
 func main() {
@@ -88,11 +99,27 @@ func main() {
 		}
 	}
 
+	// ----------------------
+
+	templates, err := getTemplates("foo")
+	if err != nil {
+		log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
+	}
+	for _, template := range templates {
+        stashkins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
+        if err := stashkins.CreateNewJobs(template); err != nil {
+			log.Printf("Error creating new jobs with template %#v\n", err)
+			continue
+		}
+	}
+
+	// ----------------------
+
 	jenkinsURL, err := url.Parse(*jenkinsBaseURL)
 	if err != nil {
 		log.Fatalf("Error parsing Jenkins base URL: %v\n", err)
 	}
-	jenkinsClient := jenkins.NewClient(jenkinsURL)
+	jenkinsClient := jenkins.NewClient(jenkinsURL, *stashUserName, *stashPassword)
 
 	mavenRepositoryClient = nexus.NewClient(*mavenBaseURL, *mavenUsername, *mavenPassword)
 
@@ -364,4 +391,20 @@ func shouldCreateJob(targetJobs []jenkins.JobConfig, branch string) bool {
 // care about them.
 func isIgnoreable(err error) bool {
 	return strings.HasPrefix(err.Error(), "expected element type <maven2-moduleset> but have")
+}
+
+/*
+type Template struct {
+	ProjectKey  string
+	Slug        string
+	JobTemplate []byte
+	JobType     jenkins.JobType
+}
+*/
+
+func getTemplates(templateRepo string) ([]stashkins.Template, error) {
+	repos := make([]stashkins.Template, 0)
+	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "trunk", JobType: jenkins.Maven})
+	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "xoom", JobType: jenkins.Maven})
+	return repos
 }
