@@ -33,15 +33,6 @@ type (
 		JobType     jenkins.JobType
 	}
 
-	Common interface {
-		suffixer(branch string) (string, string)
-		branchIsManaged(stashBranch string) bool
-		isFeatureBranch(branchName string) bool
-		isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool
-		shouldDeleteJob(jobSummary jenkins.JobSummary, stashBranches map[string]stash.Branch) bool
-		shouldCreateJob(jobSummaries []jenkins.JobSummary, branch string) bool
-	}
-
 	MavenRepositoryParams struct {
 		PerBranchRepositoryID string
 		WebClientParams
@@ -51,11 +42,6 @@ type (
 		URL      string
 		UserName string
 		Password string
-	}
-
-	ScmInfo struct {
-		ProjectKey string
-		Slug       string
 	}
 
 	DefaultStashkins struct {
@@ -74,7 +60,6 @@ type (
 		stashClient   stash.Stash
 		jenkinsClient jenkins.Jenkins
 		nexusClient   nexus.Client
-		Common
 	}
 )
 
