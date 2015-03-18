@@ -16,7 +16,7 @@ type (
 	Jenkins interface {
 		GetJobs() (map[string]JobDescriptor, error)
 		GetJobConfig(jobName string) (JobConfig, error)
-		GetJobSummaries() (map[string]JobSummary, error)
+		GetJobSummaries() ([]JobSummary, error)
 		CreateJob(jobName, jobConfigXML string) error
 		DeleteJob(jobName string) error
 	}
@@ -55,10 +55,10 @@ type (
 
 	// Model of both Maven and Freestyle job types
 	JobSummary struct {
-        JobDescriptor JobDescriptor
-		JobType JobType
-		GitURL  string
-		Branch  string
+		JobDescriptor JobDescriptor
+		JobType       JobType
+		GitURL        string
+		Branch        string
 	}
 
 	Scm struct {

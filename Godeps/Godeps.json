@@ -4,7 +4,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/xoom/jenkins",
-			"Rev": "5b92509652eb3757f4d2f2626089ec7deaf61ba5"
+			"Rev": "67388d3d783d9c8b1d05c6e48524bfa4fae31448"
 		},
 		{
 			"ImportPath": "github.com/xoom/stash",
