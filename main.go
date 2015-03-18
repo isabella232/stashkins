@@ -13,17 +13,17 @@ import (
 
 var (
 	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
-	jenkinsBaseURL = flag.String("jenkins-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
+	jenkinsBaseURL = flag.String("jenkins-base-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 
-	jobTemplateRepositoryURL = flag.String("template-repository-url", "", "The Stash repository where job templates are stored..")
-	jobTemplateBranch        = flag.String("job-template-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
+	jobTemplateRepositoryURL = flag.String("job-template-repository-url", "", "The Stash repository where job templates are stored..")
+	jobTemplateBranch        = flag.String("job-template-repository-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
 
-	ldapUser     = flag.String("ldap-username", "", "User capable of doing automation tasks on Stash")
-	ldapPassword = flag.String("ldap-password", "", "Password for ldapUser")
+	userName = flag.String("username", "", "User capable of doing automation tasks on Stash and Jenkins")
+	password = flag.String("password", "", "Password for automation user")
 
 	mavenBaseURL           = flag.String("maven-repo-base-url", "http://localhost:8081/nexus", "Maven repository management Base URL")
-	mavenUsername          = flag.String("maven-repo-username", "", "Username for Maven repository management")
-	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management")
+	mavenUsername          = flag.String("maven-repo-username", "", "User capable of doing automation of Maven repository management")
+	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management user")
 	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
 
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
@@ -37,12 +37,11 @@ var (
 var stashParams stashkins.WebClientParams
 var nexusParams stashkins.WebClientParams
 var jenkinsParams stashkins.WebClientParams
-var scmInfo stashkins.ScmInfo
 
 func init() {
 	flag.Parse()
-	stashParams = stashkins.WebClientParams{URL: *stashBaseURL, UserName: *ldapUser, Password: *ldapPassword}
-	jenkinsParams = stashkins.WebClientParams{URL: *jenkinsBaseURL, UserName: *ldapUser, Password: *ldapPassword}
+	stashParams = stashkins.WebClientParams{URL: *stashBaseURL, UserName: *userName, Password: *password}
+	jenkinsParams = stashkins.WebClientParams{URL: *jenkinsBaseURL, UserName: *userName, Password: *password}
 	nexusParams = stashkins.WebClientParams{URL: *mavenBaseURL, UserName: *mavenUsername, Password: *mavenPassword}
 }
 
@@ -76,16 +75,20 @@ func getTemplates(templateRepo string) ([]stashkins.Template, error) {
 
 func validateCommandLineArguments() {
 
-	if *ldapUser == "" {
+	if *userName == "" {
 		log.Fatalf("ldapUser is required")
 	}
 
-	if *ldapPassword == "" {
+	if *password == "" {
 		log.Fatalf("ldapPassword is required")
 	}
 
-	if *templateRepositoryURL == "" {
+	if *jobTemplateRepositoryURL == "" {
 		log.Fatalf("template-repository-url is required")
+	}
+
+	if *mavenRepositoryGroupID == "" {
+		log.Fatalf("maven-repo-repository-groupID is required")
 	}
 
 	if *mavenBaseURL == "" || *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
