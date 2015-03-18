@@ -60,7 +60,7 @@ func main() {
 
 	validateCommandLineArguments()
 
-	templates, err := getTemplates("foo")
+	templates, err := getTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch)
 	if err != nil {
 		log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
 	}
@@ -73,7 +73,7 @@ func main() {
 	}
 }
 
-func getTemplates(templateRepo string) ([]stashkins.Template, error) {
+func getTemplates(templateRepoURL, templateBranch string) ([]stashkins.Template, error) {
 	repos := make([]stashkins.Template, 0)
 	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "trunk", JobType: jenkins.Maven})
 	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "xoom", JobType: jenkins.Maven})
@@ -82,12 +82,8 @@ func getTemplates(templateRepo string) ([]stashkins.Template, error) {
 
 func validateCommandLineArguments() {
 
-	if *userName == "" {
-		log.Fatalf("ldapUser is required")
-	}
-
-	if *password == "" {
-		log.Fatalf("ldapPassword is required")
+	if *userName == "" || *password == "" {
+		log.Fatalf("username and password are required")
 	}
 
 	if *jobTemplateRepositoryURL == "" {
@@ -98,7 +94,7 @@ func validateCommandLineArguments() {
 		log.Fatalf("maven-repo-repository-groupID is required")
 	}
 
-	if *mavenBaseURL == "" || *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
-		log.Fatalf("maven-repo-base-url, maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
+	if *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
+		log.Fatalf("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
 	}
 }
