@@ -35,14 +35,21 @@ var (
 )
 
 var stashParams stashkins.WebClientParams
-var nexusParams stashkins.WebClientParams
+var nexusParams stashkins.MavenRepositoryParams
 var jenkinsParams stashkins.WebClientParams
 
 func init() {
 	flag.Parse()
 	stashParams = stashkins.WebClientParams{URL: *stashBaseURL, UserName: *userName, Password: *password}
 	jenkinsParams = stashkins.WebClientParams{URL: *jenkinsBaseURL, UserName: *userName, Password: *password}
-	nexusParams = stashkins.WebClientParams{URL: *mavenBaseURL, UserName: *mavenUsername, Password: *mavenPassword}
+	nexusParams = stashkins.MavenRepositoryParams{
+		WebClientParams: stashkins.WebClientParams{
+			URL:      *mavenBaseURL,
+			UserName: *mavenUsername,
+			Password: *mavenPassword,
+		},
+		PerBranchRepositoryID: *mavenRepositoryGroupID,
+	}
 }
 
 func main() {
@@ -70,7 +77,7 @@ func getTemplates(templateRepo string) ([]stashkins.Template, error) {
 	repos := make([]stashkins.Template, 0)
 	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "trunk", JobType: jenkins.Maven})
 	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "xoom", JobType: jenkins.Maven})
-	return repos
+	return repos, nil
 }
 
 func validateCommandLineArguments() {
