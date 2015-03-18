@@ -53,13 +53,14 @@ type (
 		branchesNotBuilt []string
 		oldJobs          []jenkins.JobSummary
 
-		CommonOperations
-	}
-
-	CommonOperations struct {
 		stashClient   stash.Stash
 		jenkinsClient jenkins.Jenkins
 		nexusClient   nexus.Client
+
+		StatelessOperations
+	}
+
+	StatelessOperations struct {
 	}
 )
 
@@ -86,7 +87,9 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 		StashParams:      stashParams,
 		JenkinsParams:    jenkinsParams,
 		NexusParams:      nexusParams,
-		CommonOperations: CommonOperations{stashClient: stashClient, jenkinsClient: jenkinsClient, nexusClient: nexusClient},
+		stashClient:      stashClient,
+		jenkinsClient:    jenkinsClient,
+		nexusClient:      nexusClient,
 		jobsWithGitURL:   make([]jenkins.JobSummary, 0),
 		branchesNotBuilt: make([]string, 0),
 		oldJobs:          make([]jenkins.JobSummary, 0),
@@ -239,7 +242,7 @@ func (c DefaultStashkins) Run(templateRecord Template) error {
 	return nil
 }
 
-func (c CommonOperations) suffixer(branch string) (string, string) {
+func (c StatelessOperations) suffixer(branch string) (string, string) {
 	s := strings.Split(branch, "/")
 	prefix := s[0]
 	var suffix string
@@ -257,20 +260,20 @@ func (c CommonOperations) suffixer(branch string) (string, string) {
 	return prefix, "-" + suffix
 }
 
-func (c CommonOperations) branchIsManaged(stashBranch string) bool {
+func (c StatelessOperations) branchIsManaged(stashBranch string) bool {
 	return c.isFeatureBranch(stashBranch) || stashBranch == "develop"
 }
 
-func (c CommonOperations) isFeatureBranch(branchName string) bool {
+func (c StatelessOperations) isFeatureBranch(branchName string) bool {
 	// Do not try to manage a branch that has an * asterisk in it, as some Jenkins branch specs might contain (origin/feature/*).
 	return strings.Contains(branchName, "feature/") && !strings.Contains(branchName, "*")
 }
 
-func (c CommonOperations) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
+func (c StatelessOperations) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
 	return jobSummary.GitURL == jobRepositoryURL
 }
 
-func (c CommonOperations) shouldDeleteJob(jobSummary jenkins.JobSummary, stashBranches map[string]stash.Branch) bool {
+func (c StatelessOperations) shouldDeleteJob(jobSummary jenkins.JobSummary, stashBranches map[string]stash.Branch) bool {
 	if !c.branchIsManaged(jobSummary.Branch) {
 		return false
 	}
@@ -283,7 +286,7 @@ func (c CommonOperations) shouldDeleteJob(jobSummary jenkins.JobSummary, stashBr
 	return deleteJobConfig
 }
 
-func (c CommonOperations) shouldCreateJob(jobSummaries []jenkins.JobSummary, branch string) bool {
+func (c StatelessOperations) shouldCreateJob(jobSummaries []jenkins.JobSummary, branch string) bool {
 	if !c.branchIsManaged(branch) {
 		return false
 	}
@@ -296,11 +299,11 @@ func (c CommonOperations) shouldCreateJob(jobSummaries []jenkins.JobSummary, bra
 }
 
 // Form the maven repository ID from project parts.  Each part must be cleaned and made URL-safe because the result will form part of an HTTP URL.
-func (c CommonOperations) mavenRepositoryID(gitRepoProjectKey, gitRepoSlug, gitBranch string) string {
+func (c StatelessOperations) mavenRepositoryID(gitRepoProjectKey, gitRepoSlug, gitBranch string) string {
 	return fmt.Sprintf("%s.%s.%s", c.mavenRepoIDPartCleaner(gitRepoProjectKey), c.mavenRepoIDPartCleaner(gitRepoSlug), c.mavenRepoIDPartCleaner(gitBranch))
 }
 
-func (c CommonOperations) mavenRepoIDPartCleaner(b string) string {
+func (c StatelessOperations) mavenRepoIDPartCleaner(b string) string {
 	thing := b
 	thing = strings.Replace(thing, "/", "_", -1)
 	thing = strings.Replace(thing, "&", "_", -1)
@@ -308,7 +311,7 @@ func (c CommonOperations) mavenRepoIDPartCleaner(b string) string {
 	return thing
 }
 
-func (c CommonOperations) buildMavenRepositoryURL(nexusBaseURL, gitProjectKey, gitRepositorySlug, gitBranch string) string {
+func (c StatelessOperations) buildMavenRepositoryURL(nexusBaseURL, gitProjectKey, gitRepositorySlug, gitBranch string) string {
 	var mavenSnapshotRepositoryURL string
 	if gitBranch == "develop" {
 		mavenSnapshotRepositoryURL = fmt.Sprintf("%s/content/repositories/snapshots", nexusBaseURL)
