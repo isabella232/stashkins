@@ -67,7 +67,7 @@ type (
 
 	postJobDeleteTasks func(jobName, gitRepositoryURL, branchName string, templateRecord Template) error
 
-	postJobCreateTasks func(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) interface{}
+	postJobCreateTasks func(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) error
 )
 
 func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams) DefaultStashkins {
@@ -112,6 +112,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 
 	var jobModeller modelMaker
 	var postDeleter postJobDeleteTasks
+	var postCreator postJobCreateTasks
 
 	switch templateRecord.JobType {
 	case jenkins.Maven:
@@ -145,8 +146,41 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 			return nil
 		}
 
+		postCreator = func(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) error {
+			branchRepresentation := strings.Replace(branch, "/", "_", -1)
+			repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
+			if present, err := c.nexusClient.RepositoryExists(repositoryID); err == nil && !present {
+				if rc, err := c.nexusClient.CreateSnapshotRepository(repositoryID); err != nil {
+					log.Printf("stashkins.ReconcileJobs failed to create Maven repository %s: %+v\n", repositoryID, err)
+					return err
+				} else {
+					if rc == 201 {
+						log.Printf("Created Maven repositoryID %s\n", repositoryID)
+					}
+				}
+			} else {
+				if err != nil {
+					log.Printf("Maven postCreator: error checking if Maven repositoryID %s exists: %v\n", repositoryID, err)
+					return err
+				} else {
+					log.Printf("Maven postCreator: Maven repositoryID %s exists.  Skipping.\n", repositoryID)
+				}
+			}
+
+			repositoryGroupID := maventools.GroupID(c.NexusParams.PerBranchRepositoryID)
+			if rc, err := c.nexusClient.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
+				log.Printf("stashkins.ReconcileJobs failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, c.NexusParams.PerBranchRepositoryID, err)
+			} else {
+				if rc == 200 {
+					log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, c.NexusParams.PerBranchRepositoryID)
+				}
+			}
+
+			return nil
+		}
+
 	case jenkins.Freestyle:
-		log.Printf("Freestyle modeller not implemented yet")
+		panic("Freestyle modeller not implemented yet")
 	}
 
 	// Fetch all branches for this repository
@@ -213,39 +247,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 			return err
 		}
 
-		switch templateRecord.JobType {
-		case jenkins.Maven:
-
-			// Feature branches get a dedicated per-branch Nexus Maven repository
-			if c.isFeatureBranch(branch) {
-				branchRepresentation := strings.Replace(branch, "/", "_", -1)
-				repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
-				if present, err := c.nexusClient.RepositoryExists(repositoryID); err == nil && !present {
-					if rc, err := c.nexusClient.CreateSnapshotRepository(repositoryID); err != nil {
-						log.Printf("stashkins.ReconcileJobs failed to create Maven repository %s: %+v\n", repositoryID, err)
-					} else {
-						if rc == 201 {
-							log.Printf("Created Maven repositoryID %s\n", repositoryID)
-						}
-					}
-				} else {
-					if err != nil {
-						log.Printf("stashkins.ReconcileJobs error creating Maven repositoryID %s: %v\n", repositoryID, err)
-					} else {
-						log.Printf("stashkins.ReconcileJobs Maven repositoryID %s exists.  Skipping.\n", repositoryID)
-					}
-				}
-				repositoryGroupID := maventools.GroupID(c.NexusParams.PerBranchRepositoryID)
-				if rc, err := c.nexusClient.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
-					log.Printf("stashkins.ReconcileJobs failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, c.NexusParams.PerBranchRepositoryID, err)
-				} else {
-					if rc == 200 {
-						log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, c.NexusParams.PerBranchRepositoryID)
-					}
-				}
-			}
-		}
-
+		postCreator(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
 	}
 	return nil
 }
