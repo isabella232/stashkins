@@ -3,7 +3,14 @@ package stashkins
 import "testing"
 
 func TestMavenRepoID(t *testing.T) {
-	o := StatelessOperations{}
+	wc := WebClientParams{URL: "http://localhost:9090/nexus"}
+
+	o := MavenAspect{
+		MavenRepositoryParams: MavenRepositoryParams{
+			WebClientParams:       wc,
+			PerBranchRepositoryID: "PerBranchID",
+		},
+	}
 
 	if s := o.mavenRepositoryID("INF", "test-me", "master"); s != "INF.test-me.master" {
 		t.Fatalf("Want INF.test-me but got %s\n", s)

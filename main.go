@@ -65,14 +65,23 @@ func main() {
 		log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
 	}
 
-	stashkins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
+	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
 
-	jobSummaries, err := stashkins.GetJobSummaries()
+	jobSummaries, err := skins.GetJobSummaries()
 	if err != nil {
 		log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
 	}
 	for _, template := range templates {
-		if err := stashkins.ReconcileJobs(jobSummaries, template); err != nil {
+		var jobAspect stashkins.Aspect
+
+		switch template.JobType {
+		case jenkins.Maven:
+			jobAspect = stashkins.MavenAspect{MavenRepositoryParams: nexusParams, Client: skins.NexusClient}
+		case jenkins.Freestyle:
+			panic("Freestyle jobs not supported yet")
+		}
+
+		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
 			log.Printf("Error reconciling jobs with template %#v\n", err)
 			continue
 		}
