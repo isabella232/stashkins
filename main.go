@@ -64,9 +64,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
 	}
+
+	stashkins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
+
+	jobSummaries, err := stashkins.GetJobSummaries()
+	if err != nil {
+		log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
+	}
 	for _, template := range templates {
-		stashkins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
-		if err := stashkins.Run(template); err != nil {
+		if err := stashkins.ReconcileJobs(jobSummaries, template); err != nil {
 			log.Printf("Error creating new jobs with template %#v\n", err)
 			continue
 		}
