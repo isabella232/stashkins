@@ -9,7 +9,7 @@ LD_FLAGS := -X main.version $(VERSION) -X main.commit $(COMMIT_ID) -X main.build
 all: clean binaries 
 
 test:
-	godep go test -v
+	godep go test -v ./...
 
 binaries: tools deps test 
 	GOOS=darwin GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-darwin-$(ARCH)
