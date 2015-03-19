@@ -1,20 +1,22 @@
-package main
+package stashkins
 
 import "testing"
 
 func TestBranchIsManaged(t *testing.T) {
-	if branchIsManaged("master") {
+	s := StatelessOperations{}
+
+	if s.branchIsManaged("master") {
 		t.Fatalf("want master managed == false but got true\n")
 	}
-	if !branchIsManaged("develop") {
+	if !s.branchIsManaged("develop") {
 		t.Fatalf("want develop managed == true but got true\n")
 	}
 
-	if !branchIsManaged("feature/somebranch") {
+	if !s.branchIsManaged("feature/somebranch") {
 		t.Fatalf("want feature/somebranch managed == true but got false\n")
 	}
 
-	if !branchIsManaged("origin/feature/somebranch") {
+	if !s.branchIsManaged("origin/feature/somebranch") {
 		t.Fatalf("want origin/feature/somebranch managed == true but got false\n")
 	}
 }
