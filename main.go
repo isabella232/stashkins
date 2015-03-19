@@ -73,7 +73,7 @@ func main() {
 	}
 	for _, template := range templates {
 		if err := stashkins.ReconcileJobs(jobSummaries, template); err != nil {
-			log.Printf("Error creating new jobs with template %#v\n", err)
+			log.Printf("Error reconciling jobs with template %#v\n", err)
 			continue
 		}
 	}
