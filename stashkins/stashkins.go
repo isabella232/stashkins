@@ -31,6 +31,7 @@ type (
 		Slug        string
 		JobTemplate []byte
 		JobType     jenkins.JobType
+		JobAspect   Aspect
 	}
 
 	WebClientParams struct {

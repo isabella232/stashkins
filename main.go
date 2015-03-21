@@ -90,8 +90,8 @@ func main() {
 
 func getTemplates(templateRepoURL, templateBranch string) ([]stashkins.Template, error) {
 	repos := make([]stashkins.Template, 0)
-	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "trunk", JobType: jenkins.Maven})
-	repos = append(repos, stashkins.Template{ProjectKey: "PLAT", Slug: "xoom", JobType: jenkins.Maven})
+	repos = append(repos, stashkins.Template{ProjectKey: "PROJ", Slug: "p1", JobType: jenkins.Maven})
+	repos = append(repos, stashkins.Template{ProjectKey: "PROJ", Slug: "p2", JobType: jenkins.Maven})
 	return repos, nil
 }
 
