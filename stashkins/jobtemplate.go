@@ -10,7 +10,7 @@ func TemplateType(xmlDocument []byte) (string, error) {
 	reader := strings.NewReader(string(xmlDocument))
 	decoder := xml.NewDecoder(reader)
 	for {
-		token, err = decoder.Token()
+		token, err := decoder.Token()
 		if err != nil {
 			return "", err
 		}

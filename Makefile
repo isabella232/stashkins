@@ -25,10 +25,6 @@ deps:
 tools:
 	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep
 
-clean: 
-	go clean
-	rm -f *.deb
-
 package: all
 	mkdir -p packaging
 	cp $(NAME)-linux-$(ARCH) packaging/$(NAME)
