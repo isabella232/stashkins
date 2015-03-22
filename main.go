@@ -5,6 +5,7 @@ import (
 
 	"log"
 	"os"
+	"os/user"
 
 	"github.com/xoom/jenkins"
 
@@ -60,7 +61,12 @@ func main() {
 
 	validateCommandLineArguments()
 
-	templates, err := getTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch)
+	whoami, err := user.Current()
+	if err != nil {
+		log.Fatalf("stashkins.main cannot get current user's home directory:  %v\n", err)
+	}
+
+	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, whoami.HomeDir+"/stashkins-work")
 	if err != nil {
 		log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
 	}
@@ -86,13 +92,6 @@ func main() {
 			continue
 		}
 	}
-}
-
-func getTemplates(templateRepoURL, templateBranch string) ([]stashkins.Template, error) {
-	repos := make([]stashkins.Template, 0)
-	repos = append(repos, stashkins.Template{ProjectKey: "PROJ", Slug: "p1", JobType: jenkins.Maven})
-	repos = append(repos, stashkins.Template{ProjectKey: "PROJ", Slug: "p2", JobType: jenkins.Maven})
-	return repos, nil
 }
 
 func validateCommandLineArguments() {

@@ -1,4 +1,4 @@
-package git
+package stashkins
 
 import (
 	"io/ioutil"
