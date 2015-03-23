@@ -3,7 +3,8 @@ package stashkins
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
+	"fmt"
+
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,18 +14,28 @@ import (
 	"github.com/xoom/jenkins"
 )
 
-func templateType(xmlDocument []byte) (string, error) {
+func templateType(xmlDocument []byte) (jenkins.JobType, error) {
 	decoder := xml.NewDecoder(bytes.NewBuffer(xmlDocument))
+	var t string
+
 	for {
 		token, err := decoder.Token()
 		if err != nil {
-			return "", err
+			return jenkins.Unknown, err
 		}
 		if v, ok := token.(xml.StartElement); ok {
-			return v.Name.Local, nil
+			t = v.Name.Local
+			break
 		}
 	}
-	return "", errors.New("This document has no xml.StartElement")
+
+	switch t {
+	case "maven2-moduleset":
+		return jenkins.Maven, nil
+	case "project":
+		return jenkins.Freestyle, nil
+	}
+	return jenkins.Unknown, fmt.Errorf("Unknown Jenkins job type: %s", t)
 }
 
 func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error) {
@@ -64,24 +75,10 @@ func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error)
 			continue
 		}
 
-		startElement, err := templateType(data)
+		jobType, err := templateType(data)
 		if err != nil {
-			log.Printf("stashkins.GetTemplates Skipping template repository record (XML parsing error) %s: %v\n", file, err)
+			log.Printf("stashkins.GetTemplates Skipping template repository record %s: %v\n", file, err)
 			continue
-		}
-
-		if startElement != "maven2-moduleset" && startElement != "project" {
-			log.Printf("stashkins.GetTemplates Skipping template repository record (unsupported document type) %s: %v\n", startElement)
-			continue
-		}
-
-		var jobType jenkins.JobType
-
-		switch startElement {
-		case "maven2-moduleset":
-			jobType = jenkins.Maven
-		case "project":
-			jobType = jenkins.Freestyle
 		}
 
 		t := Template{ProjectKey: projectKey, Slug: slug, JobTemplate: data, JobType: jobType}

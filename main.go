@@ -77,6 +77,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
 	}
+
 	for _, template := range templates {
 		var jobAspect stashkins.Aspect
 

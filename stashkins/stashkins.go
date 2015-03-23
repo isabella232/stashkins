@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 	"strings"
 	"text/template"
 
@@ -31,7 +32,6 @@ type (
 		Slug        string
 		JobTemplate []byte
 		JobType     jenkins.JobType
-		JobAspect   Aspect
 	}
 
 	WebClientParams struct {
@@ -69,6 +69,10 @@ type (
 		PostJobDeleteTasks(jobName, gitRepositoryURL, branchName string, templateRecord Template) error
 		PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) error
 	}
+)
+
+var (
+	Log *log.Logger = log.New(os.Stdout, "INFO ", log.Ldate|log.Ltime|log.Llongfile)
 )
 
 func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams) DefaultStashkins {
