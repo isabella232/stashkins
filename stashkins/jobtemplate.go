@@ -3,7 +3,6 @@ package stashkins
 import (
 	"bytes"
 	"encoding/xml"
-	"fmt"
 
 	"io/ioutil"
 	"log"
@@ -16,8 +15,8 @@ import (
 
 func templateType(xmlDocument []byte) (jenkins.JobType, error) {
 	decoder := xml.NewDecoder(bytes.NewBuffer(xmlDocument))
-	var t string
 
+	var t string
 	for {
 		token, err := decoder.Token()
 		if err != nil {
@@ -35,7 +34,7 @@ func templateType(xmlDocument []byte) (jenkins.JobType, error) {
 	case "project":
 		return jenkins.Freestyle, nil
 	}
-	return jenkins.Unknown, fmt.Errorf("Unknown Jenkins job type: %s", t)
+	return jenkins.Unknown, nil
 }
 
 func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error) {
@@ -79,6 +78,11 @@ func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error)
 		if err != nil {
 			log.Printf("stashkins.GetTemplates Skipping template repository record %s: %v\n", file, err)
 			continue
+		} else {
+			if jobType == jenkins.Unknown {
+				log.Printf("stashkins.GetTemplates Skipping template repository record (unknown type)  %d: %v\n", file, jobType)
+				continue
+			}
 		}
 
 		t := Template{ProjectKey: projectKey, Slug: slug, JobTemplate: data, JobType: jobType}
