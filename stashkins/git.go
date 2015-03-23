@@ -1,7 +1,6 @@
 package stashkins
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 )
@@ -38,9 +37,8 @@ func executeShellCommand(commandName string, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%v\n", string(stdOutErr))
-
-	fmt.Printf("log: %s %+v\n", commandName, args)
+	Log.Printf("%s %+v\n", commandName, args)
+	Log.Printf("%v\n", string(stdOutErr))
 
 	return nil
 }

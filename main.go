@@ -29,6 +29,8 @@ var (
 
 	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
 
+	Log *log.Logger = log.New(os.Stdout, "main ", log.Ldate|log.Ltime|log.Lshortfile)
+
 	version   string
 	commit    string
 	buildTime string
@@ -54,7 +56,7 @@ func init() {
 }
 
 func main() {
-	log.Printf("Version: %s, CommitID: %s, build time: %s, SDK Info: %s\n", version, commit, buildTime, sdkInfo)
+	Log.Printf("Version: %s, CommitID: %s, build time: %s, SDK Info: %s\n", version, commit, buildTime, sdkInfo)
 	if *versionFlag {
 		os.Exit(0)
 	}
@@ -63,19 +65,19 @@ func main() {
 
 	whoami, err := user.Current()
 	if err != nil {
-		log.Fatalf("stashkins.main cannot get current user's home directory:  %v\n", err)
+		Log.Fatalf("stashkins.main cannot get current user's home directory:  %v\n", err)
 	}
 
 	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, whoami.HomeDir+"/stashkins-work")
 	if err != nil {
-		log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
+		Log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
 	}
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
 
 	jobSummaries, err := skins.GetJobSummaries()
 	if err != nil {
-		log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
+		Log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
 	for _, template := range templates {
@@ -89,7 +91,7 @@ func main() {
 		}
 
 		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
-			log.Printf("Error reconciling jobs with template %#v\n", err)
+			Log.Printf("Error reconciling jobs with template %#v\n", err)
 			continue
 		}
 	}
@@ -98,18 +100,18 @@ func main() {
 func validateCommandLineArguments() {
 
 	if *userName == "" || *password == "" {
-		log.Fatalf("username and password are required")
+		Log.Fatalf("username and password are required")
 	}
 
 	if *jobTemplateRepositoryURL == "" {
-		log.Fatalf("template-repository-url is required")
+		Log.Fatalf("template-repository-url is required")
 	}
 
 	if *mavenRepositoryGroupID == "" {
-		log.Fatalf("maven-repo-repository-groupID is required")
+		Log.Fatalf("maven-repo-repository-groupID is required")
 	}
 
 	if *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
-		log.Fatalf("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
+		Log.Fatalf("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
 	}
 }

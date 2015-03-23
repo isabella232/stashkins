@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error)
 		truncatedPath := strings.Replace(file, dir+"/", "", 1)
 		parts := strings.Split(truncatedPath, "/")
 		if len(parts) != 3 {
-			log.Printf("stashkins.GetTemplates Skipping invalid template repository record (Unexpected filesystem layout): %s\n", truncatedPath)
+			Log.Printf("stashkins.GetTemplates Skipping invalid template repository record (Unexpected filesystem layout): %s\n", truncatedPath)
 			continue
 		}
 		projectKey := parts[0]
@@ -70,17 +69,17 @@ func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error)
 
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
-			log.Printf("stashkins.GetTemplates Skipping template repository record (Read template file) %s: %v\n", file, err)
+			Log.Printf("stashkins.GetTemplates Skipping template repository record (Read template file) %s: %v\n", file, err)
 			continue
 		}
 
 		jobType, err := templateType(data)
 		if err != nil {
-			log.Printf("stashkins.GetTemplates Skipping template repository record %s: %v\n", file, err)
+			Log.Printf("stashkins.GetTemplates Skipping template repository record %s: %v\n", file, err)
 			continue
 		} else {
 			if jobType == jenkins.Unknown {
-				log.Printf("stashkins.GetTemplates Skipping template repository record (unknown type)  %d: %v\n", file, jobType)
+				Log.Printf("stashkins.GetTemplates Skipping template repository record (unknown type)  %d: %v\n", file, jobType)
 				continue
 			}
 		}

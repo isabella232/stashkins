@@ -2,7 +2,6 @@ package stashkins
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/xoom/maventools"
@@ -40,10 +39,10 @@ func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branchNam
 		branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
 		repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
 		if _, err := maven.Client.DeleteRepository(repositoryID); err != nil {
-			log.Printf("Maven postDeleter failed to delete Maven repository %s: %+v\n", repositoryID, err)
+			Log.Printf("Maven postDeleter failed to delete Maven repository %s: %+v\n", repositoryID, err)
 			return err
 		} else {
-			log.Printf("Deleted Maven repository %v\n", repositoryID)
+			Log.Printf("Deleted Maven repository %v\n", repositoryID)
 		}
 	}
 	return nil
@@ -54,28 +53,28 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 	repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
 	if present, err := maven.Client.RepositoryExists(repositoryID); err == nil && !present {
 		if rc, err := maven.Client.CreateSnapshotRepository(repositoryID); err != nil {
-			log.Printf("stashkins.ReconcileJobs failed to create Maven repository %s: %+v\n", repositoryID, err)
+			Log.Printf("stashkins.ReconcileJobs failed to create Maven repository %s: %+v\n", repositoryID, err)
 			return err
 		} else {
 			if rc == 201 {
-				log.Printf("Created Maven repositoryID %s\n", repositoryID)
+				Log.Printf("Created Maven repositoryID %s\n", repositoryID)
 			}
 		}
 	} else {
 		if err != nil {
-			log.Printf("Maven postCreator: error checking if Maven repositoryID %s exists: %v\n", repositoryID, err)
+			Log.Printf("Maven postCreator: error checking if Maven repositoryID %s exists: %v\n", repositoryID, err)
 			return err
 		} else {
-			log.Printf("Maven postCreator: Maven repositoryID %s exists.  Skipping.\n", repositoryID)
+			Log.Printf("Maven postCreator: Maven repositoryID %s exists.  Skipping.\n", repositoryID)
 		}
 	}
 
 	repositoryGroupID := maventools.GroupID(maven.MavenRepositoryParams.PerBranchRepositoryID)
 	if rc, err := maven.Client.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
-		log.Printf("stashkins.ReconcileJobs failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID, err)
+		Log.Printf("stashkins.ReconcileJobs failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID, err)
 	} else {
 		if rc == 200 {
-			log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID)
+			Log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID)
 		}
 	}
 

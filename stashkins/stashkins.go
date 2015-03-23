@@ -72,7 +72,7 @@ type (
 )
 
 var (
-	Log *log.Logger = log.New(os.Stdout, "INFO ", log.Ldate|log.Ltime|log.Llongfile)
+	Log *log.Logger = log.New(os.Stdout, "Stashkins ", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams) DefaultStashkins {
@@ -107,7 +107,7 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 func (c DefaultStashkins) GetJobSummaries() ([]jenkins.JobSummary, error) {
 	jobSummaries, err := c.JenkinsClient.GetJobSummaries()
 	if err != nil {
-		log.Printf("stashkins.getJobSummaries get jobs error: %v\n", err)
+		Log.Printf("stashkins.getJobSummaries get jobs error: %v\n", err)
 		return nil, err
 	}
 	return jobSummaries, nil
@@ -118,13 +118,13 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Fetch all branches for this repository
 	stashBranches, err := c.StashClient.GetBranches(templateRecord.ProjectKey, templateRecord.Slug)
 	if err != nil {
-		log.Printf("stashkins.ReconcileJobs error getting branches from Stash for repository %s/%s: %v\n", templateRecord.ProjectKey, templateRecord.Slug, err)
+		Log.Printf("stashkins.ReconcileJobs error getting branches from Stash for repository %s/%s: %v\n", templateRecord.ProjectKey, templateRecord.Slug, err)
 		return err
 	}
 
 	gitRepository, err := c.StashClient.GetRepository(templateRecord.ProjectKey, templateRecord.Slug)
 	if err != nil {
-		log.Printf("stashkins.ReconcileJobs get jobs error: %v\n", err)
+		Log.Printf("stashkins.ReconcileJobs get jobs error: %v\n", err)
 		return err
 	}
 
@@ -156,9 +156,9 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	for _, jobSummary := range oldJobs {
 		jobName := jobSummary.JobDescriptor.Name
 		if err := c.JenkinsClient.DeleteJob(jobName); err != nil {
-			log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
+			Log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
 		} else {
-			log.Printf("Deleted obsolete job %+v\n", jobName)
+			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
 
 		jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, templateRecord)
@@ -189,7 +189,7 @@ func (c DefaultStashkins) createJob(templateRecord Template, newJobName string, 
 	hydratedTemplate := bytes.NewBufferString("")
 	err = jobTemplate.Execute(hydratedTemplate, jobModel)
 	if err != nil {
-		log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.JobTemplate), err)
+		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.JobTemplate), err)
 		// If the template is bad, just return vs. continue because it won't work the next time through, either.
 		return err
 	}
@@ -197,10 +197,10 @@ func (c DefaultStashkins) createJob(templateRecord Template, newJobName string, 
 	// Create the job
 	err = c.JenkinsClient.CreateJob(newJobName, string(hydratedTemplate.Bytes()))
 	if err != nil {
-		log.Printf("stashkins.createJob failed to create job %+v, continuing...: error==%#v\n", newJobName, err)
+		Log.Printf("stashkins.createJob failed to create job %+v, continuing...: error==%#v\n", newJobName, err)
 		return err
 	} else {
-		log.Printf("Created job %s\n", newJobName)
+		Log.Printf("Created job %s\n", newJobName)
 	}
 
 	return nil
