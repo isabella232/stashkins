@@ -33,4 +33,12 @@ func TestDocumentType(t *testing.T) {
 	if jobType, _ := templateType([]byte(unknown)); jobType != jenkins.Unknown {
 		t.Fatalf("Want jenkins.Unknown type but got %v\n", jobType)
 	}
+
+	if jobType, _ := templateType([]byte("")); jobType != jenkins.Unknown {
+		t.Fatalf("Want jenkins.Unknown type but got %v\n", jobType)
+	}
+
+	if _, err := templateType([]byte("{}")); err == nil {
+		t.Fatalf("Expecting an error parsing not-XMLt %v\n", err)
+	}
 }
