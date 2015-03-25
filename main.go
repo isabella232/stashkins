@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"log"
 	"os"
@@ -67,6 +68,7 @@ func main() {
 	if err != nil {
 		Log.Fatalf("stashkins.main cannot get current user's home directory:  %v\n", err)
 	}
+	Log.Printf("Current user: %#v\n", whoami)
 
 	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, whoami.HomeDir+"/stashkins-work")
 	if err != nil {
@@ -80,6 +82,10 @@ func main() {
 		Log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
+	for _, summary := range jobSummaries {
+		fmt.Printf("%#v\n", summary)
+	}
+
 	for _, template := range templates {
 		var jobAspect stashkins.Aspect
 
@@ -87,13 +93,18 @@ func main() {
 		case jenkins.Maven:
 			jobAspect = stashkins.MavenAspect{MavenRepositoryParams: nexusParams, Client: skins.NexusClient}
 		case jenkins.Freestyle:
-			panic("Freestyle jobs not supported yet")
-		}
-
-		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
-			Log.Printf("Error reconciling jobs with template %#v\n", err)
+			Log.Printf("main: freestyle jobs not supported yet %#v\n", template)
 			continue
 		}
+		fmt.Printf("@@@ template %#v\n", template)
+		fmt.Printf("@@@ aspect %#v\n", jobAspect)
+
+		/*
+			if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
+				Log.Printf("Error reconciling jobs with template %#v\n", err)
+				continue
+			}
+		*/
 	}
 }
 
