@@ -83,7 +83,7 @@ func main() {
 	}
 
 	for _, summary := range jobSummaries {
-		fmt.Printf("%#v\n", summary)
+		fmt.Printf("Branch summary: %#v\n", summary)
 	}
 
 	for _, template := range templates {
@@ -96,15 +96,12 @@ func main() {
 			Log.Printf("main: freestyle jobs not supported yet %#v\n", template)
 			continue
 		}
-		fmt.Printf("@@@ template %#v\n", template)
-		fmt.Printf("@@@ aspect %#v\n", jobAspect)
+		fmt.Printf("template ProjectKey=%s, Slug=%s, JobType=%d\n", template.ProjectKey, template.Slug, template.JobType)
 
-		/*
-			if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
-				Log.Printf("Error reconciling jobs with template %#v\n", err)
-				continue
-			}
-		*/
+		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
+			Log.Printf("Error reconciling jobs with template %#v\n", err)
+			continue
+		}
 	}
 }
 
