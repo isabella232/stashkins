@@ -13,33 +13,26 @@ import (
 )
 
 var (
-	stashBaseURL   = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
-	jenkinsBaseURL = flag.String("jenkins-base-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
-
+	stashBaseURL             = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
+	jenkinsBaseURL           = flag.String("jenkins-base-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
 	jobTemplateRepositoryURL = flag.String("job-template-repository-url", "", "The Stash repository where job templates are stored..")
 	jobTemplateBranch        = flag.String("job-template-repository-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
-
-	userName = flag.String("username", "", "User capable of doing automation tasks on Stash and Jenkins")
-	password = flag.String("password", "", "Password for automation user")
-
-	mavenBaseURL           = flag.String("maven-repo-base-url", "http://localhost:8081/nexus", "Maven repository management Base URL")
-	mavenUsername          = flag.String("maven-repo-username", "", "User capable of doing automation of Maven repository management")
-	mavenPassword          = flag.String("maven-repo-password", "", "Password for Maven repository management user")
-	mavenRepositoryGroupID = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
-
-	versionFlag = flag.Bool("version", false, "Print build info from which stashkins was built")
+	userName                 = flag.String("username", "", "User capable of doing automation tasks on Stash and Jenkins")
+	password                 = flag.String("password", "", "Password for automation user")
+	mavenBaseURL             = flag.String("maven-repo-base-url", "http://localhost:8081/nexus", "Maven repository management Base URL")
+	mavenUsername            = flag.String("maven-repo-username", "", "User capable of doing automation of Maven repository management")
+	mavenPassword            = flag.String("maven-repo-password", "", "Password for Maven repository management user")
+	mavenRepositoryGroupID   = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
+	versionFlag              = flag.Bool("version", false, "Print build info from which stashkins was built")
 
 	Log *log.Logger = log.New(os.Stdout, "main ", log.Ldate|log.Ltime|log.Lshortfile)
 
-	version   string
-	commit    string
-	buildTime string
-	sdkInfo   string
-)
+	stashParams   stashkins.WebClientParams
+	jenkinsParams stashkins.WebClientParams
+	nexusParams   stashkins.MavenRepositoryParams
 
-var stashParams stashkins.WebClientParams
-var nexusParams stashkins.MavenRepositoryParams
-var jenkinsParams stashkins.WebClientParams
+	buildInfo string
+)
 
 func init() {
 	flag.Parse()
@@ -56,7 +49,7 @@ func init() {
 }
 
 func main() {
-	Log.Printf("Version: %s, CommitID: %s, build time: %s, SDK Info: %s\n", version, commit, buildTime, sdkInfo)
+	log.Printf("%s\n", buildInfo)
 	if *versionFlag {
 		os.Exit(0)
 	}
@@ -67,18 +60,17 @@ func main() {
 	if err != nil {
 		Log.Fatalf("stashkins.main cannot get current user's home directory:  %v\n", err)
 	}
-	Log.Printf("Current user: %#v\n", whoami)
+	Log.Printf("Current user: %+v\n", whoami)
+
+	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
+	jobSummaries, err := skins.GetJobSummaries()
+	if err != nil {
+		Log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
+	}
 
 	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, whoami.HomeDir+"/stashkins-work")
 	if err != nil {
 		Log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
-	}
-
-	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
-
-	jobSummaries, err := skins.GetJobSummaries()
-	if err != nil {
-		Log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
 	for _, template := range templates {
