@@ -72,14 +72,13 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 	repositoryGroupID := maventools.GroupID(maven.MavenRepositoryParams.PerBranchRepositoryID)
 	if rc, err := maven.Client.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
 		Log.Printf("stashkins.ReconcileJobs failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID, err)
+		return err
 	} else {
 		if rc == 200 {
 			Log.Printf("Maven repositoryID %s added to repository groupID %s\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID)
 		}
 	}
-
 	return nil
-
 }
 
 func (maven MavenAspect) buildMavenRepositoryURL(gitProjectKey, gitRepositorySlug, gitBranch string) string {

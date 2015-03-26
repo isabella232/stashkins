@@ -162,7 +162,9 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
 
-		jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, templateRecord)
+		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, templateRecord); err != nil {
+			Log.Printf("Error in post-job-delete-task, but willing to continue: %#v\n", err)
+		}
 	}
 
 	// Create missing jobs
@@ -180,7 +182,9 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 			return err
 		}
 
-		jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
+		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord); err != nil {
+			Log.Printf("Error in post-job-create-task, but willing to continue: %#v\n", err)
+		}
 	}
 	return nil
 }
