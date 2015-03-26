@@ -150,9 +150,9 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	}
 
 	Log.Printf("Number of Git branches for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(stashBranches))
-	Log.Printf("Number of target jobs for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(jobsWithGitURL))
-	Log.Printf("Number of old jobs for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(oldJobs))
-	Log.Printf("Number of jobs to be created for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(branchesNotBuilt))
+	Log.Printf("Number of jobs building some branch against %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(jobsWithGitURL))
+	Log.Printf("Number of old jobs built against %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(oldJobs))
+	Log.Printf("Number of jobs to be created against %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(branchesNotBuilt))
 
 	// Delete old jobs
 	for _, jobSummary := range oldJobs {
