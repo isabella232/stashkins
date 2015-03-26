@@ -17,7 +17,7 @@ import (
 
 type (
 
-	// Data structure for a Maven Jenkins Project
+	// Go text/template data structure for a Maven Jenkins Project
 	MavenJob struct {
 		JobName                    string // code in ssh://git@example.com:9999/teamp/code.git
 		Description                string // mashup of repository URL and branch name
@@ -26,7 +26,7 @@ type (
 		MavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
 	}
 
-	// Maps to a record in the template repository
+	// A record in the template repository
 	Template struct {
 		ProjectKey  string
 		Slug        string
@@ -114,7 +114,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Fetch the repository metadata
 	gitRepository, err := c.StashClient.GetRepository(templateRecord.ProjectKey, templateRecord.Slug)
 	if err != nil {
-		Log.Printf("stashkins.ReconcileJobs get repository error: %v\n", err)
+		Log.Printf("stashkins.ReconcileJobs get project repository error: %v\n", err)
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Compile list of jobs that build anywhere on this Git repository
 	jobsWithGitURL := make([]jenkins.JobSummary, 0)
 	for _, jobSummary := range jobSummaries {
-		if c.isTargetJob(jobSummary, gitRepository.SshUrl()) { // what if there is no ssh url?  only http?
+		if c.isTargetJob(jobSummary, gitRepository.SshUrl()) {
 			jobsWithGitURL = append(jobsWithGitURL, jobSummary)
 		}
 	}
@@ -149,6 +149,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		}
 	}
 
+	Log.Printf("Number of Git branches for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(stashBranches))
 	Log.Printf("Number of target jobs for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(jobsWithGitURL))
 	Log.Printf("Number of old jobs for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(oldJobs))
 	Log.Printf("Number of jobs to be created for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(branchesNotBuilt))
@@ -158,6 +159,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		jobName := jobSummary.JobDescriptor.Name
 		if err := c.JenkinsClient.DeleteJob(jobName); err != nil {
 			Log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
+			continue
 		} else {
 			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
@@ -179,7 +181,8 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
 
 		if err := c.createJob(templateRecord, newJobName, model); err != nil {
-			return err
+			Log.Printf("Error creating job %s:: %#v\n", newJobName, err)
+			continue
 		}
 
 		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord); err != nil {

@@ -86,8 +86,7 @@ func main() {
 		}
 
 		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
-			Log.Printf("main: error reconciling jobs with template %#v\n", err)
-			continue
+			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", template.ProjectKey, template.Slug, err)
 		}
 	}
 }
