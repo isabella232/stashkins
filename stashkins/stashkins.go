@@ -68,7 +68,7 @@ type (
 )
 
 var (
-	Log *log.Logger = log.New(os.Stdout, "Stashkins ", log.Ldate|log.Ltime|log.Lshortfile)
+	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams) DefaultStashkins {

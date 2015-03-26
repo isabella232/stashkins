@@ -25,7 +25,7 @@ var (
 	mavenRepositoryGroupID   = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
 	versionFlag              = flag.Bool("version", false, "Print build info from which stashkins was built")
 
-	Log *log.Logger = log.New(os.Stdout, "main ", log.Ldate|log.Ltime|log.Lshortfile)
+	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 
 	stashParams   stashkins.WebClientParams
 	jenkinsParams stashkins.WebClientParams
@@ -85,6 +85,7 @@ func main() {
 			continue
 		}
 
+		Log.Printf("Reconciling jobs for %s/%s\n", template.ProjectKey, template.Slug)
 		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
 			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", template.ProjectKey, template.Slug, err)
 		}
