@@ -36,13 +36,13 @@ func templateType(xmlDocument []byte) (jenkins.JobType, error) {
 	return jenkins.Unknown, nil
 }
 
-func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error) {
-	if err := FetchTemplates(templateRepositoryURL, branch, dir); err != nil {
+func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]Template, error) {
+	if err := FetchTemplates(templateRepositoryURL, branch, cloneIntoDir); err != nil {
 		return nil, err
 	}
 
 	templateFiles := make([]string, 0)
-	err := filepath.Walk(dir, filepath.WalkFunc(func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(cloneIntoDir, filepath.WalkFunc(func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -50,15 +50,13 @@ func GetTemplates(templateRepositoryURL, branch, dir string) ([]Template, error)
 			templateFiles = append(templateFiles, path)
 		}
 		return nil
-	}))
-
-	if err != nil {
+	})); err != nil {
 		return nil, err
 	}
 
 	templates := make([]Template, 0)
 	for _, file := range templateFiles {
-		truncatedPath := strings.Replace(file, dir+"/", "", 1)
+		truncatedPath := strings.Replace(file, cloneIntoDir+"/", "", 1)
 		parts := strings.Split(truncatedPath, "/")
 		if len(parts) != 3 {
 			Log.Printf("stashkins.GetTemplates Skipping invalid template repository record (Unexpected filesystem layout): %s\n", truncatedPath)

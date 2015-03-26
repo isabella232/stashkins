@@ -58,19 +58,20 @@ func main() {
 
 	whoami, err := user.Current()
 	if err != nil {
-		Log.Fatalf("stashkins.main cannot get current user's home directory:  %v\n", err)
+		Log.Fatalf("main: cannot get current user's home directory:  %v\n", err)
 	}
 	Log.Printf("Current user: %+v\n", whoami)
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
+
 	jobSummaries, err := skins.GetJobSummaries()
 	if err != nil {
-		Log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
+		Log.Fatalf("main: Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
 	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, whoami.HomeDir+"/stashkins-work")
 	if err != nil {
-		Log.Fatalf("stashkins.main cannot fetch job templates:  %v\n", err)
+		Log.Fatalf("main: cannot fetch job templates:  %v\n", err)
 	}
 
 	for _, template := range templates {
@@ -85,7 +86,7 @@ func main() {
 		}
 
 		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
-			Log.Printf("Error reconciling jobs with template %#v\n", err)
+			Log.Printf("main: error reconciling jobs with template %#v\n", err)
 			continue
 		}
 	}
