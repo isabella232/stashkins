@@ -50,10 +50,6 @@ type (
 		JenkinsParams WebClientParams
 		NexusParams   MavenRepositoryParams
 
-		jobsWithGitURL   []jenkins.JobSummary
-		branchesNotBuilt []string
-		oldJobs          []jenkins.JobSummary
-
 		StashClient   stash.Stash
 		JenkinsClient jenkins.Jenkins
 		NexusClient   maventools.Client
@@ -153,41 +149,39 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		}
 	}
 
-	fmt.Printf("jobsWithGitURL: %#v\n", jobsWithGitURL)
-	fmt.Printf("oldJobs: %#v\n", oldJobs)
-	fmt.Printf("branchesNotBuilt: %#v\n", branchesNotBuilt)
+	Log.Printf("Number of target jobs for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(jobsWithGitURL))
+	Log.Printf("Number of old jobs for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(oldJobs))
+	Log.Printf("Number of jobs to be created for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(branchesNotBuilt))
 
-	/*
-		// Delete old jobs
-		for _, jobSummary := range oldJobs {
-			jobName := jobSummary.JobDescriptor.Name
-			if err := c.JenkinsClient.DeleteJob(jobName); err != nil {
-				Log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
-			} else {
-				Log.Printf("Deleted obsolete job %+v\n", jobName)
-			}
-
-			jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, templateRecord)
+	// Delete old jobs
+	for _, jobSummary := range oldJobs {
+		jobName := jobSummary.JobDescriptor.Name
+		if err := c.JenkinsClient.DeleteJob(jobName); err != nil {
+			Log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
+		} else {
+			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
 
-		// Create missing jobs
-		for _, branch := range c.branchesNotBuilt {
-			// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "12".
-			// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
-			branchBaseName, branchSuffix := c.suffixer(branch)
+		jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, templateRecord)
+	}
 
-			newJobName := templateRecord.Slug + "-continuous-" + branchBaseName + branchSuffix
-			newJobDescription := "This is a continuous build for " + templateRecord.Slug + ", branch " + branch
+	// Create missing jobs
+	for _, branch := range branchesNotBuilt {
+		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "12".
+		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
+		branchBaseName, branchSuffix := c.suffixer(branch)
 
-			model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
+		newJobName := templateRecord.Slug + "-continuous-" + branchBaseName + branchSuffix
+		newJobDescription := "This is a continuous build for " + templateRecord.Slug + ", branch " + branch
 
-			if err := c.createJob(templateRecord, newJobName, model); err != nil {
-				return err
-			}
+		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
 
-			jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
+		if err := c.createJob(templateRecord, newJobName, model); err != nil {
+			return err
 		}
-	*/
+
+		//	jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
+	}
 	return nil
 }
 

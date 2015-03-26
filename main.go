@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 
 	"log"
 	"os"
@@ -82,10 +81,6 @@ func main() {
 		Log.Fatalf("Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
-	for _, summary := range jobSummaries {
-		fmt.Printf("Branch summary: %#v\n", summary)
-	}
-
 	for _, template := range templates {
 		var jobAspect stashkins.Aspect
 
@@ -96,7 +91,6 @@ func main() {
 			Log.Printf("main: freestyle jobs not supported yet %#v\n", template)
 			continue
 		}
-		fmt.Printf("template ProjectKey=%s, Slug=%s, JobType=%d\n", template.ProjectKey, template.Slug, template.JobType)
 
 		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
 			Log.Printf("Error reconciling jobs with template %#v\n", err)
