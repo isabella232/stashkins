@@ -31,29 +31,37 @@ func (maven MavenAspect) MakeModel(newJobName, newJobDescription, gitRepositoryU
 }
 
 func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branchName string, templateRecord Template) error {
-	if maven.isFeatureBranch(branchName) {
-		var branchRepresentation string
-		if strings.HasPrefix(branchName, "origin/") {
-			branchRepresentation = branchName[len("origin/"):]
-		}
-		branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
-		repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
-		if _, err := maven.Client.DeleteRepository(repositoryID); err != nil {
-			Log.Printf("Maven postDeleter failed to delete Maven repository %s: %+v\n", repositoryID, err)
-			return err
-		} else {
-			Log.Printf("Deleted Maven repository %v\n", repositoryID)
-		}
+	if !maven.isFeatureBranch(branchName) {
+		Log.Printf("maven postdelete skipping tasks for non-feature branch %s:\n", branchName)
+		return nil
+	}
+
+	var branchRepresentation string
+	if strings.HasPrefix(branchName, "origin/") {
+		branchRepresentation = branchName[len("origin/"):]
+	}
+	branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
+	repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
+	if _, err := maven.Client.DeleteRepository(repositoryID); err != nil {
+		Log.Printf("Maven postDeleter failed to delete Maven repository %s: %+v\n", repositoryID, err)
+		return err
+	} else {
+		Log.Printf("Deleted Maven repository %v\n", repositoryID)
 	}
 	return nil
 }
 
 func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) error {
+	if !maven.isFeatureBranch(branch) {
+		Log.Printf("maven postcreator skipping tasks for non-feature branch %s:\n", branch)
+		return nil
+	}
+
 	branchRepresentation := strings.Replace(branch, "/", "_", -1)
 	repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
 	if present, err := maven.Client.RepositoryExists(repositoryID); err == nil && !present {
 		if rc, err := maven.Client.CreateSnapshotRepository(repositoryID); err != nil {
-			Log.Printf("stashkins.ReconcileJobs failed to create Maven repository %s: %+v\n", repositoryID, err)
+			Log.Printf("Maven postcreator failed to create Maven repository %s: %+v\n", repositoryID, err)
 			return err
 		} else {
 			if rc == 201 {
