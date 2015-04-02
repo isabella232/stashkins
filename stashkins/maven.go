@@ -42,6 +42,7 @@ func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branchNam
 	}
 	branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
 	repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
+    Log.Printf("@@@ repoID: %s\n", repositoryID)
 	if _, err := maven.Client.DeleteRepository(repositoryID); err != nil {
 		Log.Printf("Maven postDeleter failed to delete Maven repository %s: %+v\n", repositoryID, err)
 		return err
