@@ -42,7 +42,6 @@ func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branchNam
 	}
 	branchRepresentation = strings.Replace(branchRepresentation, "/", "_", -1)
 	repositoryID := maventools.RepositoryID(fmt.Sprintf("%s.%s.%s", templateRecord.ProjectKey, templateRecord.Slug, branchRepresentation))
-    Log.Printf("@@@ repoID: %s\n", repositoryID)
 	if _, err := maven.Client.DeleteRepository(repositoryID); err != nil {
 		Log.Printf("Maven postDeleter failed to delete Maven repository %s: %+v\n", repositoryID, err)
 		return err
@@ -80,7 +79,7 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 
 	repositoryGroupID := maventools.GroupID(maven.MavenRepositoryParams.PerBranchRepositoryID)
 	if rc, err := maven.Client.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
-		Log.Printf("stashkins.ReconcileJobs failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID, err)
+		Log.Printf("Maven postCreator: failed to add Maven repository %s to repository group %s: %+v\n", repositoryID, maven.MavenRepositoryParams.PerBranchRepositoryID, err)
 		return err
 	} else {
 		if rc == 200 {
