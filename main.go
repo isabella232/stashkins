@@ -5,7 +5,6 @@ import (
 
 	"log"
 	"os"
-	"os/user"
 
 	"github.com/xoom/jenkins"
 
@@ -56,11 +55,11 @@ func main() {
 
 	validateCommandLineArguments()
 
-	whoami, err := user.Current()
-	if err != nil {
-		Log.Fatalf("main: cannot get current user's home directory:  %v\n", err)
+	homeDirectory := os.Getenv("HOME")
+	if homeDirectory == "" {
+		Log.Fatalf("main: HOME environment variable must be set to locate local template repository clone.\n")
 	}
-	Log.Printf("Current user: %+v\n", whoami)
+	Log.Printf("HOME: %+v\n", homeDirectory)
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
 
@@ -69,7 +68,7 @@ func main() {
 		Log.Fatalf("main: Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
-	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, whoami.HomeDir+"/stashkins-work")
+	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, homeDirectory+"/stashkins-work")
 	if err != nil {
 		Log.Fatalf("main: cannot fetch job templates:  %v\n", err)
 	}
