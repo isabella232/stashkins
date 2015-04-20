@@ -30,6 +30,7 @@ func pull(dir string) error {
 }
 
 func executeShellCommand(commandName string, args []string) error {
+	Log.Printf("Executing %s %+v\n", commandName, args)
 	command := exec.Command(commandName, args...)
 	var stdOutErr []byte
 	var err error
@@ -37,7 +38,6 @@ func executeShellCommand(commandName string, args []string) error {
 	if err != nil {
 		return err
 	}
-	Log.Printf("%s %+v\n", commandName, args)
 	Log.Printf("%v\n", string(stdOutErr))
 
 	return nil
