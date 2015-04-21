@@ -33,11 +33,5 @@ package: all
 
 clean: 
 	go clean
-	rm -f *.deb *.rpm packaging
+	rm -rf *.deb *.rpm packaging
 	rm -f $(NAME)-darwin-$(ARCH) $(NAME)-linux-$(ARCH) $(NAME)-windows-$(ARCH).exe
-
-package: all
-	mkdir -p packaging
-	cp $(NAME)-linux-$(ARCH) packaging/$(NAME)
-	fpm -s dir -t deb -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
-	fpm -s dir -t rpm --rpm-os linux -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
