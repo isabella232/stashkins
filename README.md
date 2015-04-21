@@ -44,3 +44,15 @@ by job-template-repository-url.  Stashkins will clone this repository
 and walk the directory tree looking for project-key/slug/template.xml
 files on which to base new jobs for project *project-key* and
 repository *slug*.
+
+Template Parameters Available to Users
+======================================
+
+The Jenkins job templates for new Maven jobs that Stashkins creates 
+have available to them the following template parameters:
+
+    JobName                    string // foo in ssh://git@example.com:9999/teamp/foo.git
+    Description                string // mashup of repository URL and branch name.  This is used for the Jenkins job description.
+    BranchName                 string // feature/PROJ-999, as in feature/PROJ-999
+    RepositoryURL              string // The developer's software project's Git URL, as in ssh://git@example.com:9999/teamp/code.git
+    MavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
