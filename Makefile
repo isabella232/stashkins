@@ -1,15 +1,15 @@
 NAME := stashkins
 ARCH := amd64
-VERSION := 1.4
+VERSION := 2.0
 DATE := $(shell date)
 COMMIT_ID := $(shell git rev-parse --short HEAD)
 SDK_INFO := $(shell go version)
-LD_FLAGS := -X main.version $(VERSION) -X main.commit $(COMMIT_ID) -X main.buildTime '$(DATE)' -X main.sdkInfo '$(SDK_INFO)'
+LD_FLAGS := -X main.buildInfo 'Version: $(VERSION), commitID: $(COMMIT_ID), build date: $(DATE), SDK: $(SDK_INFO)'
 
 all: clean binaries 
 
 test:
-	godep go test -v
+	godep go test -v ./...
 
 binaries: tools deps test 
 	GOOS=darwin GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-darwin-$(ARCH)
@@ -25,10 +25,6 @@ deps:
 tools:
 	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep
 
-clean: 
-	go clean
-	rm -f *.deb
-
 package: all
 	mkdir -p packaging
 	cp $(NAME)-linux-$(ARCH) packaging/$(NAME)
@@ -37,6 +33,11 @@ package: all
 
 clean: 
 	go clean
-	rm -f *.deb *.rpm
-	rm -rf packaging
+	rm -f *.deb *.rpm packaging
 	rm -f $(NAME)-darwin-$(ARCH) $(NAME)-linux-$(ARCH) $(NAME)-windows-$(ARCH).exe
+
+package: all
+	mkdir -p packaging
+	cp $(NAME)-linux-$(ARCH) packaging/$(NAME)
+	fpm -s dir -t deb -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
+	fpm -s dir -t rpm --rpm-os linux -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .

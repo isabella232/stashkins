@@ -9,10 +9,113 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
-func NewClient(baseURL *url.URL) Jenkins {
-	return Client{baseURL: baseURL}
+func NewClient(baseURL *url.URL, username, password string) Jenkins {
+	return Client{baseURL: baseURL, userName: username, password: password}
+}
+
+func (client Client) GetJobSummaries() ([]JobSummary, error) {
+	log.Printf("jenkins.GetJobSummaries...\n")
+	if jobDescriptors, err := client.GetJobs(); err != nil {
+		return nil, err
+	} else {
+		summaries := make([]JobSummary, 0)
+		for _, jobDescriptor := range jobDescriptors {
+			if jobSummary, err := client.getJobSummary(jobDescriptor); err != nil {
+				continue
+			} else {
+				summaries = append(summaries, jobSummary)
+			}
+		}
+		return summaries, nil
+	}
+}
+
+func (client Client) getJobSummary(jobDescriptor JobDescriptor) (JobSummary, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/job/%s/config.xml", client.baseURL.String(), jobDescriptor.Name), nil)
+	if err != nil {
+		return JobSummary{}, err
+	}
+	req.Header.Set("Accept", "application/xml")
+	req.SetBasicAuth(client.userName, client.password)
+
+	responseCode, data, err := consumeResponse(req)
+	if err != nil {
+		return JobSummary{}, err
+	}
+
+	if responseCode != http.StatusOK {
+		log.Printf("%s", string(data))
+		return JobSummary{}, fmt.Errorf("%s", string(data))
+	}
+
+	jobType, err := getJobType(data)
+	if err != nil {
+		return JobSummary{}, err
+	}
+
+	reader := bytes.NewBuffer(data)
+
+	switch jobType {
+	case Maven:
+		var maven JobConfig
+		err = xml.NewDecoder(reader).Decode(&maven)
+		if err != nil {
+			return JobSummary{}, err
+		}
+		if !buildsSingleBranch(maven.SCM) {
+			return JobSummary{}, fmt.Errorf("Maven-type job %#v contains more than one branch to build.  This is not supported.", jobDescriptor)
+		}
+		if !referencesSingleGitRepo(maven.SCM) {
+			return JobSummary{}, fmt.Errorf("Maven-type job %#v contains more than one Git repository URL.  This is not supported.", jobDescriptor)
+		}
+
+		gitURL := maven.SCM.UserRemoteConfigs.UserRemoteConfig[0].URL
+		if !strings.HasPrefix(gitURL, "ssh://") {
+			return JobSummary{}, fmt.Errorf("Only ssh:// Git URLs are supported.", jobDescriptor)
+		}
+
+		return JobSummary{
+			JobType:       Maven,
+			JobDescriptor: jobDescriptor,
+			GitURL:        gitURL,
+			Branch:        maven.SCM.Branches.Branch[0].Name,
+		}, nil
+	case Freestyle:
+		var freestyle FreeStyleJobConfig
+		err = xml.NewDecoder(reader).Decode(&freestyle)
+		if err != nil {
+			return JobSummary{}, err
+		}
+		if !buildsSingleBranch(freestyle.SCM) {
+			return JobSummary{}, fmt.Errorf("Freestyle-type job %s contains more than one branch to build.  This is not supported.", jobDescriptor)
+		}
+		if !referencesSingleGitRepo(freestyle.SCM) {
+			return JobSummary{}, fmt.Errorf("Freestyle-type job %s contains more than one Git repository URL.  This is not supported.", jobDescriptor)
+		}
+
+		gitURL := freestyle.SCM.UserRemoteConfigs.UserRemoteConfig[0].URL
+		if !strings.HasPrefix(gitURL, "ssh://") {
+			return JobSummary{}, fmt.Errorf("Only ssh:// Git URLs are supported.", jobDescriptor)
+		}
+		return JobSummary{
+			JobType:       Freestyle,
+			JobDescriptor: jobDescriptor,
+			GitURL:        gitURL,
+			Branch:        freestyle.SCM.Branches.Branch[0].Name,
+		}, nil
+	}
+	return JobSummary{}, fmt.Errorf("Unhandled job type for job name: %s\n", jobDescriptor.Name)
+}
+
+func buildsSingleBranch(scmInfo Scm) bool {
+	return len(scmInfo.Branches.Branch) == 1
+}
+
+func referencesSingleGitRepo(scmInfo Scm) bool {
+	return len(scmInfo.UserRemoteConfigs.UserRemoteConfig) == 1
 }
 
 // GetJobs retrieves the set of Jenkins jobs as a map indexed by job name.
@@ -23,6 +126,7 @@ func (client Client) GetJobs() (map[string]JobDescriptor, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
+	req.SetBasicAuth(client.userName, client.password)
 
 	responseCode, data, err := consumeResponse(req)
 	if err != nil {
@@ -55,6 +159,7 @@ func (client Client) GetJobConfig(jobName string) (JobConfig, error) {
 		return JobConfig{}, err
 	}
 	req.Header.Set("Accept", "application/xml")
+	req.SetBasicAuth(client.userName, client.password)
 
 	responseCode, data, err := consumeResponse(req)
 	if err != nil {
@@ -83,6 +188,8 @@ func (client Client) CreateJob(jobName, jobConfigXML string) error {
 		return err
 	}
 	req.Header.Set("Content-type", "application/xml")
+	req.SetBasicAuth(client.userName, client.password)
+
 	responseCode, data, err := consumeResponse(req)
 	if err != nil {
 		return err
@@ -101,6 +208,8 @@ func (client Client) DeleteJob(jobName string) error {
 		return err
 	}
 	req.Header.Set("Content-type", "application/xml")
+	req.SetBasicAuth(client.userName, client.password)
+
 	responseCode, data, err := consumeResponse(req)
 	if err != nil {
 		return err
@@ -135,4 +244,28 @@ func consumeResponse(req *http.Request) (int, []byte, error) {
 	}
 	defer response.Body.Close()
 	return response.StatusCode, data, nil
+}
+
+func getJobType(xmlDocument []byte) (JobType, error) {
+	decoder := xml.NewDecoder(bytes.NewBuffer(xmlDocument))
+
+	var t string
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return Unknown, err
+		}
+		if v, ok := token.(xml.StartElement); ok {
+			t = v.Name.Local
+			break
+		}
+	}
+
+	switch t {
+	case "maven2-moduleset":
+		return Maven, nil
+	case "project":
+		return Freestyle, nil
+	}
+	return Unknown, nil
 }

@@ -5,16 +5,27 @@ import (
 	"net/url"
 )
 
+type JobType int
+
+const (
+	Maven JobType = iota
+	Freestyle
+	Unknown
+)
+
 type (
 	Jenkins interface {
 		GetJobs() (map[string]JobDescriptor, error)
 		GetJobConfig(jobName string) (JobConfig, error)
+		GetJobSummaries() ([]JobSummary, error)
 		CreateJob(jobName, jobConfigXML string) error
 		DeleteJob(jobName string) error
 	}
 
 	Client struct {
-		baseURL *url.URL
+		baseURL  *url.URL
+		userName string
+		password string
 		Jenkins
 	}
 
@@ -27,12 +38,28 @@ type (
 		Jobs []JobDescriptor `json:"jobs"`
 	}
 
+	// Maven project
 	JobConfig struct {
 		XMLName    xml.Name   `xml:"maven2-moduleset"`
 		SCM        Scm        `xml:"scm"`
 		Publishers Publishers `xml:"publishers"`
 		RootModule RootModule `xml:"rootModule"`
 		JobName    string
+	}
+
+	// Freestyle project
+	FreeStyleJobConfig struct {
+		XMLName xml.Name `xml:"project"`
+		SCM     Scm      `xml:"scm"`
+		JobName string
+	}
+
+	// Model of both Maven and Freestyle job types
+	JobSummary struct {
+		JobDescriptor JobDescriptor
+		JobType       JobType
+		GitURL        string
+		Branch        string
 	}
 
 	Scm struct {
