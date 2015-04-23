@@ -1,6 +1,6 @@
 NAME := stashkins
 ARCH := amd64
-VERSION := 2.1
+VERSION := 2.2
 DATE := $(shell date)
 COMMIT_ID := $(shell git rev-parse --short HEAD)
 SDK_INFO := $(shell go version)
