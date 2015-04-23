@@ -144,7 +144,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Compile list of missing jobs
 	branchesNotBuilt := make([]string, 0)
 	for branch, _ := range stashBranches {
-		if c.shouldCreateJob(jobSummaries, branch) {
+		if c.shouldCreateJob(jobsWithGitURL, branch) {
 			branchesNotBuilt = append(branchesNotBuilt, branch)
 		}
 	}
