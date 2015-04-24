@@ -1,6 +1,9 @@
 NAME := stashkins
 ARCH := amd64
 VERSION := 2.2
+MAINTAINER := 'INF ENG <inf-eng@xoom.com>'
+DESCRIPTION := 'Stashkins:  Jenkins job reconcilation'
+DOCUMENTATION := 'https://github.com/xoom/stashkins'
 DATE := $(shell date)
 COMMIT_ID := $(shell git rev-parse --short HEAD)
 SDK_INFO := $(shell go version)
@@ -28,8 +31,8 @@ tools:
 package: all
 	mkdir -p packaging
 	cp $(NAME)-linux-$(ARCH) packaging/$(NAME)
-	fpm -s dir -t deb -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
-	fpm -s dir -t rpm --rpm-os linux -v $(VERSION) -n $(NAME) -a amd64  -m"Mark Petrovic <mark.petrovic@xoom.com>" --url https://github.com/xoom/stashkins --iteration 1 --prefix /usr/local/bin -C packaging .
+	fpm -s dir -t deb -v $(VERSION) -n $(NAME) -a amd64 --description $(DESCRIPTION) -m $(MAINTAINER) --vendor $(MAINTAINER) --url $(DOCUMENTATION) --iteration 1 --prefix /usr/local/bin -C packaging .
+	fpm -s dir -t rpm --rpm-os linux -v $(VERSION) -n $(NAME) -a amd64 --description $(DESCRIPTION) -m $(MAINTAINER) --vendor $(MAINTAINER) --url $(DOCUMENTATION) --iteration 1 --prefix /usr/local/bin -C packaging .
 
 clean: 
 	go clean
