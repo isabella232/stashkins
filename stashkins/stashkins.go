@@ -175,8 +175,8 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
 		branchBaseName, branchSuffix := c.suffixer(branch)
 
-		newJobName := templateRecord.Slug + "-continuous-" + branchBaseName + branchSuffix
-		newJobDescription := "This is a continuous build for " + templateRecord.Slug + ", branch " + branch
+		newJobName := templateRecord.ProjectKey + "-" + templateRecord.Slug + "-continuous-" + branchBaseName + branchSuffix
+		newJobDescription := "This is a continuous build for " + templateRecord.ProjectKey + "-" + templateRecord.Slug + ", branch " + branch
 
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
 
