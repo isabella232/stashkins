@@ -20,10 +20,7 @@ binaries: tools deps test
 	GOOS=windows GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-windows-$(ARCH).exe
 
 deps:
-	go get -v github.com/xoom/stash
-	go get -v github.com/xoom/jenkins
-	go get -v github.com/xoom/maventools
-	go get -v github.com/xoom/maventools/nexus
+	go get ./...
 
 tools:
 	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep
