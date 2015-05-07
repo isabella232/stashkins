@@ -62,8 +62,8 @@ func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]Templat
 			Log.Printf("stashkins.GetTemplates Skipping invalid template repository record (Unexpected filesystem layout): %s\n", truncatedPath)
 			continue
 		}
-		projectKey := parts[0]
-		slug := parts[1]
+		projectKey := strings.ToLower(parts[0])
+		slug := strings.ToLower(parts[1])
 
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
