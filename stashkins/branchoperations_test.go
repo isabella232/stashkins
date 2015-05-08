@@ -7,14 +7,17 @@ import (
 )
 
 func TestBranchIsManaged(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-
+	s := BranchOperations{}
 	if s.isBranchManaged("master") {
 		t.Fatalf("want master managed == false but got true\n")
 	}
 	if !s.isBranchManaged("develop") {
 		t.Fatalf("want develop managed == true but got true\n")
 	}
+}
+
+func TestIsFeatureBranch(t *testing.T) {
+	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
 
 	for _, prefix := range s.ManagedPrefixes {
 		if !s.isBranchManaged(prefix + "somebranch") {
@@ -24,27 +27,6 @@ func TestBranchIsManaged(t *testing.T) {
 		if !s.isBranchManaged("origin/" + prefix + "somebranch") {
 			t.Fatalf("want origin/" + prefix + "somebranch managed == true but got false\n")
 		}
-	}
-
-}
-
-func TestIsFeatureBranch(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-
-	if s.isFeatureBranch("master") {
-		t.Fatalf("Want false\n")
-	}
-
-	if s.isFeatureBranch("develop") {
-		t.Fatalf("Want false\n")
-	}
-
-	if !s.isFeatureBranch("origin/feature/1") {
-		t.Fatalf("Want true\n")
-	}
-
-	if !s.isFeatureBranch("feature/1") {
-		t.Fatalf("Want true\n")
 	}
 
 	if s.isFeatureBranch("origin/feature/*") {
