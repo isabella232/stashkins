@@ -22,6 +22,7 @@ var (
 	mavenUsername            = flag.String("maven-repo-username", "", "User capable of doing automation of Maven repository management")
 	mavenPassword            = flag.String("maven-repo-password", "", "Password for Maven repository management user")
 	mavenRepositoryGroupID   = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
+	managedBranchPrefixes    = flag.String("managed-branch-prefixes", "feature/,hotfix/", "Branch prefixes to manage.")
 	versionFlag              = flag.Bool("version", false, "Print build info from which stashkins was built")
 
 	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
@@ -61,7 +62,9 @@ func main() {
 	}
 	Log.Printf("HOME: %+v\n", homeDirectory)
 
-	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams)
+	branchOperations := stashkins.NewBranchOperations(*managedBranchPrefixes)
+
+	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams, branchOperations)
 
 	jobSummaries, err := skins.GetJobSummaries()
 	if err != nil {
@@ -78,7 +81,7 @@ func main() {
 
 		switch template.JobType {
 		case jenkins.Maven:
-			jobAspect = stashkins.MavenAspect{MavenRepositoryParams: nexusParams, Client: skins.NexusClient}
+			jobAspect = stashkins.NewMavenAspect(nexusParams, skins.NexusClient, branchOperations)
 		case jenkins.Freestyle:
 			Log.Printf("main: freestyle jobs not supported yet %#v\n", template)
 			continue
