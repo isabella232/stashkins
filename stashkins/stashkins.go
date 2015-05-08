@@ -144,7 +144,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Compile list of jobs that build anywhere on this Git repository
 	jobsWithGitURL := make([]jenkins.JobSummary, 0)
 	for _, jobSummary := range jobSummaries {
-		if c.branchOperations.isTargetJob(jobSummary, gitRepository.SshUrl()) {
+		if c.isTargetJob(jobSummary, gitRepository.SshUrl()) {
 			jobsWithGitURL = append(jobsWithGitURL, jobSummary)
 		}
 	}
@@ -229,4 +229,10 @@ func (c DefaultStashkins) createJob(templateRecord Template, newJobName string, 
 
 	return nil
 }
+
+
+func (c DefaultStashkins) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
+	return jobSummary.GitURL == jobRepositoryURL
+}
+
 

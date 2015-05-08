@@ -28,7 +28,7 @@ func (c BranchOperations) suffixer(branch string) (string, string) {
 	return prefix, "-" + suffix
 }
 
-func (c BranchOperations) branchIsManaged(stashBranch string) bool {
+func (c BranchOperations) isBranchManaged(stashBranch string) bool {
 	return stashBranch == "develop" || c.isFeatureBranch(stashBranch)
 }
 
@@ -44,12 +44,8 @@ func (c BranchOperations) isFeatureBranch(branchName string) bool {
 	return false
 }
 
-func (c BranchOperations) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
-	return jobSummary.GitURL == jobRepositoryURL
-}
-
 func (c BranchOperations) shouldDeleteJob(jobSummary jenkins.JobSummary, stashBranches map[string]stash.Branch) bool {
-	if !c.branchIsManaged(jobSummary.Branch) {
+	if !c.isBranchManaged(jobSummary.Branch) {
 		return false
 	}
 	deleteJobConfig := true
@@ -62,7 +58,7 @@ func (c BranchOperations) shouldDeleteJob(jobSummary jenkins.JobSummary, stashBr
 }
 
 func (c BranchOperations) shouldCreateJob(jobSummaries []jenkins.JobSummary, branch string) bool {
-	if !c.branchIsManaged(branch) {
+	if !c.isBranchManaged(branch) {
 		return false
 	}
 	for _, jobSummary := range jobSummaries {
