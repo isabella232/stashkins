@@ -1,13 +1,32 @@
 package stashkins
 
 import (
+	"strings"
+
 	"github.com/xoom/jenkins"
 	"github.com/xoom/stash"
-	"strings"
 )
 
 type BranchOperations struct {
 	ManagedPrefixes []string
+}
+
+func NewBranchOperations(managedPrefixes string) BranchOperations {
+	t := strings.Split(managedPrefixes, ",")
+	prefixes := make([]string, 0)
+	for _, v := range t {
+		candidate := strings.TrimSpace(v)
+		if candidate == "" {
+			Log.Printf("In managed prefixes [%v], candidate has zero length.  Skipping.\n", managedPrefixes)
+			continue
+		}
+		if !strings.HasSuffix(candidate, "/") {
+			Log.Printf("In managed prefixes [%v], candidate '%s' is missing trailing /.  Skipping.", managedPrefixes, candidate)
+			continue
+		}
+		prefixes = append(prefixes, candidate)
+	}
+	return BranchOperations{ManagedPrefixes: prefixes}
 }
 
 func (c BranchOperations) suffixer(branch string) (string, string) {

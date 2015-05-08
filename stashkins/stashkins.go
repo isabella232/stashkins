@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"strings"
 	"text/template"
 
 	"github.com/xoom/jenkins"
@@ -67,24 +66,6 @@ type (
 var (
 	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 )
-
-func NewBranchOperations(managedPrefixes string) BranchOperations {
-	t := strings.Split(managedPrefixes, ",")
-	prefixes := make([]string, 0)
-	for _, v := range t {
-		candidate := strings.TrimSpace(v)
-		if candidate == "" {
-			Log.Printf("Skipping zero length managed prefix candidate\n.")
-			continue
-		}
-		if !strings.HasSuffix(candidate, "/") {
-			Log.Printf("Candidate missing trailing /.  Skipping.")
-			continue
-		}
-		prefixes = append(prefixes, candidate)
-	}
-	return BranchOperations{ManagedPrefixes: prefixes}
-}
 
 func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams, branchOperations BranchOperations) DefaultStashkins {
 	var err error
@@ -230,9 +211,6 @@ func (c DefaultStashkins) createJob(templateRecord Template, newJobName string, 
 	return nil
 }
 
-
 func (c DefaultStashkins) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
 	return jobSummary.GitURL == jobRepositoryURL
 }
-
-

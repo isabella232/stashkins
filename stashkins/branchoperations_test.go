@@ -1,10 +1,23 @@
 package stashkins
 
 import (
+	"testing"
+
 	"github.com/xoom/jenkins"
 	"github.com/xoom/stash"
-	"testing"
 )
+
+func TestNewBranchOperations(t *testing.T) {
+	branchOperations := NewBranchOperations("feature/, hotfix/,,bug")
+	if len(branchOperations.ManagedPrefixes) != 2 {
+		t.Fatalf("Want 2 but got %d\n", len(branchOperations.ManagedPrefixes))
+	}
+	for _, v := range branchOperations.ManagedPrefixes {
+		if !(v == "feature/" || v == "hotfix/") {
+			t.Fatalf("Unexpected prefix %s\n", v)
+		}
+	}
+}
 
 func TestBranchIsManaged(t *testing.T) {
 	s := BranchOperations{}
