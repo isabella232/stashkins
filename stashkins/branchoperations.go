@@ -26,6 +26,9 @@ func NewBranchOperations(managedPrefixes string) BranchOperations {
 		}
 		prefixes = append(prefixes, candidate)
 	}
+	if len(prefixes) == 0 {
+		Log.Printf("Managed branch prefixes length is zero.\n")
+	}
 	return BranchOperations{ManagedPrefixes: prefixes}
 }
 

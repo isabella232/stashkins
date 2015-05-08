@@ -22,7 +22,7 @@ var (
 	mavenUsername            = flag.String("maven-repo-username", "", "User capable of doing automation of Maven repository management")
 	mavenPassword            = flag.String("maven-repo-password", "", "Password for Maven repository management user")
 	mavenRepositoryGroupID   = flag.String("maven-repo-repository-groupID", "", "Repository groupID in which to group new per-branch repositories")
-	managedBranchPrefixes    = flag.String("managed-branch-prefixes", "feature/,hotfix/", "Branch prefixes to manage.")
+	managedBranchPrefixes    = flag.String("managed-branch-prefixes", "feature/", "Branch prefixes to manage.")
 	versionFlag              = flag.Bool("version", false, "Print build info from which stashkins was built")
 
 	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)

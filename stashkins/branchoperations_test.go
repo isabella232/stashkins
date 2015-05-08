@@ -8,12 +8,24 @@ import (
 )
 
 func TestNewBranchOperations(t *testing.T) {
-	branchOperations := NewBranchOperations("feature/, hotfix/,,bug")
+	var branchOperations BranchOperations
+
+	branchOperations = NewBranchOperations("feature/, hotfix/,,bug")
 	if len(branchOperations.ManagedPrefixes) != 2 {
 		t.Fatalf("Want 2 but got %d\n", len(branchOperations.ManagedPrefixes))
 	}
 	for _, v := range branchOperations.ManagedPrefixes {
 		if !(v == "feature/" || v == "hotfix/") {
+			t.Fatalf("Unexpected prefix %s\n", v)
+		}
+	}
+
+	branchOperations = NewBranchOperations("feature/")
+	if len(branchOperations.ManagedPrefixes) != 1 {
+		t.Fatalf("Want 1 but got %d\n", len(branchOperations.ManagedPrefixes))
+	}
+	for _, v := range branchOperations.ManagedPrefixes {
+		if v != "feature/" {
 			t.Fatalf("Unexpected prefix %s\n", v)
 		}
 	}
