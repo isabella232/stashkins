@@ -3,7 +3,7 @@ package stashkins
 import "testing"
 
 func TestSuffixer(t *testing.T) {
-	s := StatelessOperations{}
+	s := BranchOperations{}
 	var a, b string
 	a, b = s.suffixer("a/b")
 	if a != "a" {

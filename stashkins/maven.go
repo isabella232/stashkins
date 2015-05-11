@@ -10,12 +10,12 @@ import (
 type MavenAspect struct {
 	MavenRepositoryParams MavenRepositoryParams
 	Client                maventools.Client
-	StatelessOperations
+	branchOperations      BranchOperations
 	Aspect
 }
 
-func NewMavenAspect(params MavenRepositoryParams, client maventools.Client) Aspect {
-	return MavenAspect{MavenRepositoryParams: params, Client: client}
+func NewMavenAspect(params MavenRepositoryParams, client maventools.Client, branchOperations BranchOperations) Aspect {
+	return MavenAspect{MavenRepositoryParams: params, Client: client, branchOperations: branchOperations}
 }
 
 func (maven MavenAspect) MakeModel(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) interface{} {
@@ -31,7 +31,7 @@ func (maven MavenAspect) MakeModel(newJobName, newJobDescription, gitRepositoryU
 }
 
 func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branchName string, templateRecord Template) error {
-	if !maven.isFeatureBranch(branchName) {
+	if !maven.branchOperations.isFeatureBranch(branchName) {
 		Log.Printf("maven postdelete skipping tasks for non-feature branch %s:\n", branchName)
 		return nil
 	}
@@ -52,7 +52,7 @@ func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branchNam
 }
 
 func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) error {
-	if !maven.isFeatureBranch(branch) {
+	if !maven.branchOperations.isFeatureBranch(branch) {
 		Log.Printf("maven postcreator skipping tasks for non-feature branch %s:\n", branch)
 		return nil
 	}

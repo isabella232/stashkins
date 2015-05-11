@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"strings"
 	"text/template"
 
 	"github.com/xoom/jenkins"
@@ -54,10 +53,7 @@ type (
 		JenkinsClient jenkins.Jenkins
 		NexusClient   maventools.Client
 
-		StatelessOperations
-	}
-
-	StatelessOperations struct {
+		branchOperations BranchOperations
 	}
 
 	Aspect interface {
@@ -71,7 +67,7 @@ var (
 	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
-func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams) DefaultStashkins {
+func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenRepositoryParams, branchOperations BranchOperations) DefaultStashkins {
 	var err error
 	var stashURL *url.URL
 	var jenkinsURL *url.URL
@@ -91,12 +87,13 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 	nexusClient := nexus.NewClient(nexusParams.URL, nexusParams.UserName, nexusParams.Password)
 
 	return DefaultStashkins{
-		StashParams:   stashParams,
-		JenkinsParams: jenkinsParams,
-		NexusParams:   nexusParams,
-		StashClient:   stashClient,
-		JenkinsClient: jenkinsClient,
-		NexusClient:   nexusClient,
+		StashParams:      stashParams,
+		JenkinsParams:    jenkinsParams,
+		NexusParams:      nexusParams,
+		StashClient:      stashClient,
+		JenkinsClient:    jenkinsClient,
+		NexusClient:      nexusClient,
+		branchOperations: branchOperations,
 	}
 }
 
@@ -136,7 +133,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Compile list of obsolete jobs
 	oldJobs := make([]jenkins.JobSummary, 0)
 	for _, jobSummary := range jobsWithGitURL {
-		if c.shouldDeleteJob(jobSummary, stashBranches) {
+		if c.branchOperations.shouldDeleteJob(jobSummary, stashBranches) {
 			oldJobs = append(oldJobs, jobSummary)
 		}
 	}
@@ -144,7 +141,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	// Compile list of missing jobs
 	branchesNotBuilt := make([]string, 0)
 	for branch, _ := range stashBranches {
-		if c.shouldCreateJob(jobsWithGitURL, branch) {
+		if c.branchOperations.shouldCreateJob(jobsWithGitURL, branch) {
 			branchesNotBuilt = append(branchesNotBuilt, branch)
 		}
 	}
@@ -173,7 +170,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 	for _, branch := range branchesNotBuilt {
 		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "12".
 		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
-		branchBaseName, branchSuffix := c.suffixer(branch)
+		branchBaseName, branchSuffix := c.branchOperations.suffixer(branch)
 
 		newJobName := templateRecord.ProjectKey + "-" + templateRecord.Slug + "-continuous-" + branchBaseName + branchSuffix
 		newJobDescription := "This is a continuous build for " + templateRecord.ProjectKey + "-" + templateRecord.Slug + ", branch " + branch
@@ -214,58 +211,6 @@ func (c DefaultStashkins) createJob(templateRecord Template, newJobName string, 
 	return nil
 }
 
-func (c StatelessOperations) suffixer(branch string) (string, string) {
-	s := strings.Split(branch, "/")
-	prefix := s[0]
-	var suffix string
-
-	if len(s) == 1 {
-		return prefix, suffix
-	}
-
-	if len(s) == 2 {
-		suffix = s[1]
-	} else {
-		suffix = branch[strings.Index(branch, "/")+1:]
-		suffix = strings.Replace(suffix, "/", "-", -1)
-	}
-	return prefix, "-" + suffix
-}
-
-func (c StatelessOperations) branchIsManaged(stashBranch string) bool {
-	return c.isFeatureBranch(stashBranch) || stashBranch == "develop"
-}
-
-func (c StatelessOperations) isFeatureBranch(branchName string) bool {
-	// Do not try to manage a branch that has an * asterisk in it, as some Jenkins branch specs might contain (origin/feature/*).
-	return strings.Contains(branchName, "feature/") && !strings.Contains(branchName, "*")
-}
-
-func (c StatelessOperations) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
+func (c DefaultStashkins) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
 	return jobSummary.GitURL == jobRepositoryURL
-}
-
-func (c StatelessOperations) shouldDeleteJob(jobSummary jenkins.JobSummary, stashBranches map[string]stash.Branch) bool {
-	if !c.branchIsManaged(jobSummary.Branch) {
-		return false
-	}
-	deleteJobConfig := true
-	for stashBranch, _ := range stashBranches {
-		if strings.HasSuffix(jobSummary.Branch, stashBranch) {
-			deleteJobConfig = false
-		}
-	}
-	return deleteJobConfig
-}
-
-func (c StatelessOperations) shouldCreateJob(jobSummaries []jenkins.JobSummary, branch string) bool {
-	if !c.branchIsManaged(branch) {
-		return false
-	}
-	for _, jobSummary := range jobSummaries {
-		if strings.HasSuffix(jobSummary.Branch, branch) {
-			return false
-		}
-	}
-	return true
 }
