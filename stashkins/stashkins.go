@@ -25,6 +25,13 @@ type (
 		MavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
 	}
 
+	FreestyleJob struct {
+		JobName       string // code in ssh://git@example.com:9999/teamp/code.git
+		Description   string // mashup of repository URL and branch name
+		BranchName    string // feature/PROJ-999, as in feature/PROJ-999
+		RepositoryURL string // ssh://git@example.com:9999/teamp/code.git
+	}
+
 	// A record in the template repository
 	Template struct {
 		ProjectKey  string

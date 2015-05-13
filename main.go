@@ -83,8 +83,7 @@ func main() {
 		case jenkins.Maven:
 			jobAspect = stashkins.NewMavenAspect(nexusParams, skins.NexusClient, branchOperations)
 		case jenkins.Freestyle:
-			Log.Printf("main: freestyle jobs not supported yet %#v\n", template)
-			continue
+			jobAspect = stashkins.NewFreestyleAspect()
 		}
 
 		Log.Printf("Reconciling jobs for %s/%s\n", template.ProjectKey, template.Slug)
