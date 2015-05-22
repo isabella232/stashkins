@@ -44,7 +44,7 @@ func init() {
 			UserName: *mavenUsername,
 			Password: *mavenPassword,
 		},
-		PerBranchRepositoryID: *mavenRepositoryGroupID,
+		FeatureBranchRepositoryGroupID: *mavenRepositoryGroupID,
 	}
 }
 
@@ -71,24 +71,24 @@ func main() {
 		Log.Fatalf("main: Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
-	templates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, homeDirectory+"/stashkins-work")
+	jobTemplates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, homeDirectory+"/stashkins-work")
 	if err != nil {
 		Log.Fatalf("main: cannot fetch job templates:  %v\n", err)
 	}
 
-	for _, template := range templates {
+	for _, jobTemplate := range jobTemplates {
 		var jobAspect stashkins.Aspect
 
-		switch template.JobType {
+		switch jobTemplate.JobType {
 		case jenkins.Maven:
 			jobAspect = stashkins.NewMavenAspect(nexusParams, skins.NexusClient, branchOperations)
 		case jenkins.Freestyle:
 			jobAspect = stashkins.NewFreestyleAspect()
 		}
 
-		Log.Printf("Reconciling jobs for %s/%s\n", template.ProjectKey, template.Slug)
-		if err := skins.ReconcileJobs(jobSummaries, template, jobAspect); err != nil {
-			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", template.ProjectKey, template.Slug, err)
+		Log.Printf("Reconciling jobs for %s/%s\n", jobTemplate.ProjectKey, jobTemplate.Slug)
+		if err := skins.ReconcileJobs(jobSummaries, jobTemplate, jobAspect); err != nil {
+			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
 		}
 	}
 }

@@ -36,7 +36,7 @@ func templateType(xmlDocument []byte) (jenkins.JobType, error) {
 	return jenkins.Unknown, nil
 }
 
-func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]Template, error) {
+func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]JobTemplate, error) {
 	if err := FetchTemplates(templateRepositoryURL, branch, cloneIntoDir); err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]Templat
 		return nil, err
 	}
 
-	templates := make([]Template, 0)
+	templates := make([]JobTemplate, 0)
 	for _, file := range templateFiles {
 		truncatedPath := strings.Replace(file, cloneIntoDir+"/", "", 1)
 		parts := strings.Split(truncatedPath, "/")
@@ -82,7 +82,7 @@ func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]Templat
 			}
 		}
 
-		t := Template{ProjectKey: projectKey, Slug: slug, JobTemplate: data, JobType: jobType}
+		t := JobTemplate{ProjectKey: projectKey, Slug: slug, ContinuousBuildJobTemplate: data, JobType: jobType}
 		templates = append(templates, t)
 	}
 

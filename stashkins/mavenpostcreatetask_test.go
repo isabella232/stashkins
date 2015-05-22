@@ -1,8 +1,9 @@
-package stashkins
+package stashkins_test
 
 import (
 	"fmt"
 	"github.com/xoom/maventools/nexus"
+	"github.com/xoom/stashkins/stashkins"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,11 +56,10 @@ func TestMavenPostCreateTasks(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	params := MavenRepositoryParams{
-		PerBranchRepositoryID: "repoID",
+	params := stashkins.MavenRepositoryParams{
+		FeatureBranchRepositoryGroupID: "repoID",
 	}
 	nexusClient := nexus.NewClient(testServer.URL, "u", "p")
-
-	aspect := MavenAspect{MavenRepositoryParams: params, Client: nexusClient}
-	aspect.PostJobCreateTasks("jobName", "jobDescription", "ssh://git@example.com/dot.git", "feature/1", Template{ProjectKey: "PROJ", Slug: "slug"})
+	aspect := stashkins.NewMavenAspect(params, nexusClient, stashkins.BranchOperations{})
+	aspect.PostJobCreateTasks("jobName", "jobDescription", "ssh://git@example.com/dot.git", "feature/1", stashkins.JobTemplate{ProjectKey: "PROJ", Slug: "slug"})
 }
