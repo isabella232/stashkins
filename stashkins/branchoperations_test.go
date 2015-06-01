@@ -109,3 +109,24 @@ func TestJobObsolete(t *testing.T) {
 		t.Fatalf("Want false\n")
 	}
 }
+
+func TestStripLeadingOrigin(t *testing.T) {
+	s := BranchOperations{}
+
+	var v string
+	v = s.stripLeadingOrigin("origin/a_branch")
+	if v != "a_branch" {
+		t.Fatalf("Want a_branch but got %s\n", v)
+	}
+
+	v = s.stripLeadingOrigin("notorigin/a_branch")
+	if v != "notorigin/a_branch" {
+		t.Fatalf("Want notorigin/a_branch but got %s\n", v)
+	}
+
+	v = s.stripLeadingOrigin("develop")
+	if v != "develop" {
+		t.Fatalf("Want develop but got %s\n", v)
+	}
+
+}

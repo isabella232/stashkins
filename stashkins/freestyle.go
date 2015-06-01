@@ -8,7 +8,7 @@ func NewFreestyleAspect() Aspect {
 	return FreestyleAspect{}
 }
 
-func (fs FreestyleAspect) MakeModel(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) interface{} {
+func (fs FreestyleAspect) MakeModel(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) interface{} {
 	return FreestyleJob{
 		JobName:       newJobName,
 		Description:   newJobDescription,
@@ -17,10 +17,10 @@ func (fs FreestyleAspect) MakeModel(newJobName, newJobDescription, gitRepository
 	}
 }
 
-func (fs FreestyleAspect) PostJobCreateTasks(jobName, jobDescription, gitRepositoryURL, branch string, templateRecord Template) error {
+func (fs FreestyleAspect) PostJobCreateTasks(jobName, jobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
 	return nil
 }
 
-func (fs FreestyleAspect) PostJobDeleteTasks(jobName, jobDescription, gitRepositoryURL string, templateRecord Template) error {
+func (fs FreestyleAspect) PostJobDeleteTasks(jobName, jobDescription, gitRepositoryURL string, templateRecord JobTemplate) error {
 	return nil
 }

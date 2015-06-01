@@ -16,15 +16,18 @@ import (
 
 type (
 
-	// Go text/template data structure for a Maven Jenkins Project
+	// Maven job model.  The name of these fields cannot be changed without
+	// changing the same names in the text templates in the template repository.
 	MavenJob struct {
 		JobName                    string // code in ssh://git@example.com:9999/teamp/code.git
 		Description                string // mashup of repository URL and branch name
 		BranchName                 string // feature/PROJ-999, as in feature/PROJ-999
 		RepositoryURL              string // ssh://git@example.com:9999/teamp/code.git
 		MavenSnapshotRepositoryURL string // the Maven repository URL to which to publish this job's artifacts
+		MavenRepositoryID          string // the unique id of the Maven repository to which this job's artifacts will be published
 	}
 
+	// Freestyle job model
 	FreestyleJob struct {
 		JobName       string // code in ssh://git@example.com:9999/teamp/code.git
 		Description   string // mashup of repository URL and branch name
@@ -32,41 +35,45 @@ type (
 		RepositoryURL string // ssh://git@example.com:9999/teamp/code.git
 	}
 
-	// A record in the template repository
-	Template struct {
-		ProjectKey  string
-		Slug        string
-		JobTemplate []byte
-		JobType     jenkins.JobType
-	}
-
+	// Generic struct to hold a network URL and login
 	WebClientParams struct {
 		URL      string
 		UserName string
 		Password string
 	}
 
+	// A Nexus / Maven client needs more than a URL and login, namely, a feature branch repository ID.
 	MavenRepositoryParams struct {
-		PerBranchRepositoryID string
+		FeatureBranchRepositoryGroupID string
 		WebClientParams
 	}
 
+	// The core Stashkins functionality is articulated here.
 	DefaultStashkins struct {
-		StashParams   WebClientParams
-		JenkinsParams WebClientParams
-		NexusParams   MavenRepositoryParams
+		stashParams   WebClientParams
+		jenkinsParams WebClientParams
+		nexusParams   MavenRepositoryParams
 
-		StashClient   stash.Stash
-		JenkinsClient jenkins.Jenkins
+		stashClient   stash.Stash
+		jenkinsClient jenkins.Jenkins
 		NexusClient   maventools.Client
 
 		branchOperations BranchOperations
 	}
 
+	// A record in the template repository
+	JobTemplate struct {
+		ProjectKey                 string
+		Slug                       string
+		ContinuousBuildJobTemplate []byte
+		JobType                    jenkins.JobType
+	}
+
+	// Jobs have aspects.  Maven jobs create and delete per-branch repositories.
 	Aspect interface {
-		MakeModel(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) interface{}
-		PostJobDeleteTasks(jobName, gitRepositoryURL, branchName string, templateRecord Template) error
-		PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord Template) error
+		MakeModel(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) interface{}
+		PostJobDeleteTasks(jobName, gitRepositoryURL, branchName string, templateRecord JobTemplate) error
+		PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) error
 	}
 )
 
@@ -94,18 +101,18 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 	nexusClient := nexus.NewClient(nexusParams.URL, nexusParams.UserName, nexusParams.Password)
 
 	return DefaultStashkins{
-		StashParams:      stashParams,
-		JenkinsParams:    jenkinsParams,
-		NexusParams:      nexusParams,
-		StashClient:      stashClient,
-		JenkinsClient:    jenkinsClient,
-		NexusClient:      nexusClient,
+		stashParams:      stashParams,
+		jenkinsParams:    jenkinsParams,
+		nexusParams:      nexusParams,
+		stashClient:      stashClient,
+		jenkinsClient:    jenkinsClient,
 		branchOperations: branchOperations,
+		NexusClient:      nexusClient,
 	}
 }
 
 func (c DefaultStashkins) GetJobSummaries() ([]jenkins.JobSummary, error) {
-	jobSummaries, err := c.JenkinsClient.GetJobSummaries()
+	jobSummaries, err := c.jenkinsClient.GetJobSummaries()
 	if err != nil {
 		Log.Printf("stashkins.getJobSummaries get jobs error: %v\n", err)
 		return nil, err
@@ -113,19 +120,19 @@ func (c DefaultStashkins) GetJobSummaries() ([]jenkins.JobSummary, error) {
 	return jobSummaries, nil
 }
 
-func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templateRecord Template, jobAspect Aspect) error {
+func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTemplate JobTemplate, jobAspect Aspect) error {
 
 	// Fetch the repository metadata
-	gitRepository, err := c.StashClient.GetRepository(templateRecord.ProjectKey, templateRecord.Slug)
+	gitRepository, err := c.stashClient.GetRepository(jobTemplate.ProjectKey, jobTemplate.Slug)
 	if err != nil {
 		Log.Printf("stashkins.ReconcileJobs get project repository error: %v\n", err)
 		return err
 	}
 
 	// Fetch all branches for this repository
-	stashBranches, err := c.StashClient.GetBranches(templateRecord.ProjectKey, templateRecord.Slug)
+	stashBranches, err := c.stashClient.GetBranches(jobTemplate.ProjectKey, jobTemplate.Slug)
 	if err != nil {
-		Log.Printf("stashkins.ReconcileJobs error getting branches from Stash for repository %s/%s: %v\n", templateRecord.ProjectKey, templateRecord.Slug, err)
+		Log.Printf("stashkins.ReconcileJobs error getting branches from Stash for repository %s/%s: %v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
 		return err
 	}
 
@@ -153,22 +160,22 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		}
 	}
 
-	Log.Printf("Number of Git branches for %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(stashBranches))
-	Log.Printf("Number of jobs building some branch against %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(jobsWithGitURL))
-	Log.Printf("Number of old jobs built against %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(oldJobs))
-	Log.Printf("Number of jobs to be created against %s/%s: %d\n", templateRecord.ProjectKey, templateRecord.Slug, len(branchesNotBuilt))
+	Log.Printf("Number of Git branches for %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(stashBranches))
+	Log.Printf("Number of jobs building some branch against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(jobsWithGitURL))
+	Log.Printf("Number of old jobs built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(oldJobs))
+	Log.Printf("Number of jobs to be created against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(branchesNotBuilt))
 
 	// Delete old jobs
 	for _, jobSummary := range oldJobs {
 		jobName := jobSummary.JobDescriptor.Name
-		if err := c.JenkinsClient.DeleteJob(jobName); err != nil {
+		if err := c.jenkinsClient.DeleteJob(jobName); err != nil {
 			Log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
 			continue
 		} else {
 			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
 
-		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, templateRecord); err != nil {
+		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, jobTemplate); err != nil {
 			Log.Printf("Error in post-job-delete-task, but willing to continue: %#v\n", err)
 		}
 	}
@@ -179,35 +186,35 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, templ
 		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
 		branchBaseName, branchSuffix := c.branchOperations.suffixer(branch)
 
-		newJobName := templateRecord.ProjectKey + "-" + templateRecord.Slug + "-continuous-" + branchBaseName + branchSuffix
-		newJobDescription := "This is a continuous build for " + templateRecord.ProjectKey + "-" + templateRecord.Slug + ", branch " + branch
+		newJobName := jobTemplate.ProjectKey + "-" + jobTemplate.Slug + "-continuous-" + branchBaseName + branchSuffix
+		newJobDescription := "This is a continuous build for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug + ", branch " + branch
 
-		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord)
+		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate)
 
-		if err := c.createJob(templateRecord, newJobName, model); err != nil {
+		if err := c.createJob(jobTemplate, newJobName, model); err != nil {
 			Log.Printf("Error creating job %s:: %#v\n", newJobName, err)
 			continue
 		}
 
-		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, templateRecord); err != nil {
+		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate); err != nil {
 			Log.Printf("Error in post-job-create-task, but willing to continue: %#v\n", err)
 		}
 	}
 	return nil
 }
 
-func (c DefaultStashkins) createJob(templateRecord Template, newJobName string, jobModel interface{}) error {
-	jobTemplate, err := template.New("jobconfig").Parse(string(templateRecord.JobTemplate))
+func (c DefaultStashkins) createJob(templateRecord JobTemplate, newJobName string, jobModel interface{}) error {
+	jobTemplate, err := template.New("jobconfig").Parse(string(templateRecord.ContinuousBuildJobTemplate))
 	hydratedTemplate := bytes.NewBufferString("")
 	err = jobTemplate.Execute(hydratedTemplate, jobModel)
 	if err != nil {
-		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.JobTemplate), err)
+		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.ContinuousBuildJobTemplate), err)
 		// If the template is bad, just return vs. continue because it won't work the next time through, either.
 		return err
 	}
 
 	// Create the job
-	err = c.JenkinsClient.CreateJob(newJobName, string(hydratedTemplate.Bytes()))
+	err = c.jenkinsClient.CreateJob(newJobName, string(hydratedTemplate.Bytes()))
 	if err != nil {
 		Log.Printf("stashkins.createJob failed to create job %+v, continuing...: error==%#v\n", newJobName, err)
 		return err

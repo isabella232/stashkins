@@ -1,7 +1,8 @@
-package stashkins
+package stashkins_test
 
 import (
 	"github.com/xoom/maventools/nexus"
+	"github.com/xoom/stashkins/stashkins"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,11 +21,11 @@ func TestMavenPostDeleteTasks(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	params := MavenRepositoryParams{
-		PerBranchRepositoryID: "repoID",
+	params := stashkins.MavenRepositoryParams{
+		FeatureBranchRepositoryGroupID: "repoID",
 	}
 	nexusClient := nexus.NewClient(testServer.URL, "u", "p")
 
-	aspect := MavenAspect{MavenRepositoryParams: params, Client: nexusClient}
-	aspect.PostJobDeleteTasks("jobName", "ssh://git@example.com/dot.git", "origin/feature/1", Template{ProjectKey: "PROJ", Slug: "slug"})
+	aspect := stashkins.NewMavenAspect(params, nexusClient, stashkins.BranchOperations{})
+	aspect.PostJobDeleteTasks("jobName", "ssh://git@example.com/dot.git", "origin/feature/1", stashkins.JobTemplate{ProjectKey: "PROJ", Slug: "slug"})
 }

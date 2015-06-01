@@ -90,3 +90,10 @@ func (c BranchOperations) shouldCreateJob(jobSummaries []jenkins.JobSummary, bra
 	}
 	return true
 }
+
+func (c BranchOperations) stripLeadingOrigin(branch string) string {
+	if strings.HasPrefix(branch, "origin/") {
+		return branch[len("origin/"):]
+	}
+	return branch
+}

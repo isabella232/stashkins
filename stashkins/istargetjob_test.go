@@ -1,7 +1,8 @@
 package stashkins
+
 import (
-	"testing"
 	"github.com/xoom/jenkins"
+	"testing"
 )
 
 func TestIsTargetBranch(t *testing.T) {

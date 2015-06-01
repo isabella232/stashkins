@@ -3,20 +3,17 @@ package stashkins
 import "testing"
 
 func TestRepoIDPartCleaner(t *testing.T) {
-	/*
-		o := StatelessOperations{}
+	aspect := MavenAspect{}
 
-		if s := o.mavenRepoIDPartCleaner("foo/"); s != "foo_" {
-			t.Fatalf("Want foo_ but got %s\n", s)
-		}
-		if s := o.mavenRepoIDPartCleaner("/foo/"); s != "_foo_" {
-			t.Fatalf("Want _foo_ but got %s\n", s)
-		}
-		if s := o.mavenRepoIDPartCleaner("foo?"); s != "foo_" {
-			t.Fatalf("Want foo_ but got %s\n", s)
-		}
-		if s := o.mavenRepoIDPartCleaner("foo&"); s != "foo_" {
-			t.Fatalf("Want foo_ but got %s\n", s)
-		}
-	*/
+	var out string
+
+	out = aspect.scrubRepositoryID("abc?&//")
+	if out != "abc____" {
+		t.Fatalf("Want abc____ but got %s\n", out)
+	}
+
+	out = aspect.scrubRepositoryID("123abc_.-")
+	if out != "123abc_.-" {
+		t.Fatalf("Want 123abc_.- but got %s\n", out)
+	}
 }
