@@ -65,7 +65,7 @@ type (
 	JobTemplate struct {
 		ProjectKey                 string
 		Slug                       string
-		ContinuousBuildJobTemplate []byte
+		ContinuousJobTemplate []byte
 		ReleaseJobTemplate         []byte
 		JobType                    jenkins.JobType
 	}
@@ -205,11 +205,11 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 }
 
 func (c DefaultStashkins) createJob(templateRecord JobTemplate, newJobName string, jobModel interface{}) error {
-	jobTemplate, err := template.New("jobconfig").Parse(string(templateRecord.ContinuousBuildJobTemplate))
+	jobTemplate, err := template.New("jobconfig").Parse(string(templateRecord.ContinuousJobTemplate))
 	hydratedTemplate := bytes.NewBufferString("")
 	err = jobTemplate.Execute(hydratedTemplate, jobModel)
 	if err != nil {
-		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.ContinuousBuildJobTemplate), err)
+		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.ContinuousJobTemplate), err)
 		// If the template is bad, just return vs. continue because it won't work the next time through, either.
 		return err
 	}

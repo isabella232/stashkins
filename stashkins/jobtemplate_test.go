@@ -62,3 +62,10 @@ func TestWalkerFunc(t *testing.T) {
 		t.Fatalf("Want 0 but got %d\n", len(buffer))
 	}
 }
+
+func TestTrackingKey(t *testing.T) {
+	s := templateKey("a", "b", 1)
+	if s != "a.b.1" {
+		t.Fatalf("Want a.b.1 but got %s\n", s)
+	}
+}

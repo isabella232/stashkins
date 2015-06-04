@@ -98,7 +98,7 @@ func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]JobTemp
 			}
 		}
 
-		continuousTemplateTracker[templateKey(projectKey, slug, jobType)] = JobTemplate{ProjectKey: projectKey, Slug: slug, ContinuousBuildJobTemplate: data, JobType: jobType}
+		continuousTemplateTracker[templateKey(projectKey, slug, jobType)] = JobTemplate{ProjectKey: projectKey, Slug: slug, ContinuousJobTemplate: data, JobType: jobType}
 	}
 
 	// A temporary auditing map to track release templates.
