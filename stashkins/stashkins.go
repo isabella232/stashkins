@@ -66,6 +66,7 @@ type (
 		ProjectKey                 string
 		Slug                       string
 		ContinuousBuildJobTemplate []byte
+		ReleaseJobTemplate         []byte
 		JobType                    jenkins.JobType
 	}
 
