@@ -77,7 +77,7 @@ func TestTrackingKey(t *testing.T) {
 }
 
 func TestProjectCoordinates(t *testing.T) {
-	proj, slug, err := projectCoordinates("/a/b/c.xml")
+	proj, slug, err := projectCoordinates("/a/B/c.xml")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v\n", err)
 	}
