@@ -13,7 +13,7 @@ import (
 	"github.com/xoom/jenkins"
 )
 
-func templateType(xmlDocument []byte) (jenkins.JobType, error) {
+func jobType(xmlDocument []byte) (jenkins.JobType, error) {
 	decoder := xml.NewDecoder(bytes.NewBuffer(xmlDocument))
 
 	var t string
@@ -92,7 +92,7 @@ func buildTemplates(files []string, f func(projectKey, slug string, data []byte,
 			continue
 		}
 
-		jobType, err := templateType(data)
+		jobType, err := jobType(data)
 		if err != nil {
 			Log.Printf("stashkins.GetTemplates Skipping template repository record %s: %v\n", file, err)
 			continue

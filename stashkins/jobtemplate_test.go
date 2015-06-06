@@ -21,12 +21,12 @@ func (f finfo) Name() string {
 	return f.name
 }
 
-func (f finfo) Size() int64 {
-	return 0 // unused
-}
-
 func (f finfo) Mode() os.FileMode {
 	return f.fileMode
+}
+
+func (f finfo) Size() int64 {
+	return 0 // unused
 }
 
 func (f finfo) ModTime() time.Time {
