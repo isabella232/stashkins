@@ -66,12 +66,12 @@ func main() {
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams, branchOperations)
 
-	jobSummaries, err := skins.GetJobSummaries()
+	jobSummaries, err := skins.JobSummaries()
 	if err != nil {
 		Log.Fatalf("main: Cannot get Jenkins job summaries: %#v\n", err)
 	}
 
-	jobTemplates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, homeDirectory+"/stashkins-work")
+	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, homeDirectory+"/stashkins-work")
 	if err != nil {
 		Log.Fatalf("main: cannot fetch job templates:  %v\n", err)
 	}

@@ -108,8 +108,8 @@ func buildTemplates(files []string, f func(projectKey, slug string, data []byte,
 	return templates
 }
 
-func GetTemplates(templateRepositoryURL, branch, cloneIntoDir string) ([]JobTemplate, error) {
-	if err := FetchTemplates(templateRepositoryURL, branch, cloneIntoDir); err != nil {
+func Templates(templateRepositoryURL, branch, cloneIntoDir string) ([]JobTemplate, error) {
+	if err := cloneTemplates(templateRepositoryURL, branch, cloneIntoDir); err != nil {
 		return nil, err
 	}
 

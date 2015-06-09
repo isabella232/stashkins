@@ -121,7 +121,7 @@ func TestBuildTemplates(t *testing.T) {
 		t.Fatalf("Unexpected error creating temp dir: %v\n", err)
 	}
 
-	templates, err := GetTemplates("file://"+sourceRepoDirectory, "master", cloneDirectory)
+	templates, err := Templates("file://"+sourceRepoDirectory, "master", cloneDirectory)
 	if err != nil {
 		os.RemoveAll(cloneDirectory)
 		os.RemoveAll(sourceRepoDirectory)
