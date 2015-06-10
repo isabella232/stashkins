@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"fmt"
+
 	"github.com/xoom/jenkins"
 )
 
@@ -129,7 +130,7 @@ func Templates(templateRepositoryURL, branch, cloneIntoDir string) ([]JobTemplat
 	})
 
 	// A temporary auditing map to track release templates.
-	releaseTemplates := buildTemplates(continuousTemplateFiles, func(projectKey, slug string, data []byte, jobType jenkins.JobType) *JobTemplate {
+	releaseTemplates := buildTemplates(releaseTemplateFiles, func(projectKey, slug string, data []byte, jobType jenkins.JobType) *JobTemplate {
 		return &JobTemplate{ProjectKey: projectKey, Slug: slug, ReleaseJobTemplate: data, JobType: jobType}
 	})
 

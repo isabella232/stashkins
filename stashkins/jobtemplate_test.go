@@ -2,7 +2,7 @@ package stashkins
 
 import (
 	"archive/zip"
-	"github.com/xoom/jenkins"
+	"encoding/xml"
 	"io"
 	"io/ioutil"
 	"os"
@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/xoom/jenkins"
 )
 
 type finfo struct {
@@ -131,6 +133,12 @@ func TestBuildTemplates(t *testing.T) {
 	if len(templates) != 2 {
 		t.Fatalf("Want 2 but got %d\n", len(templates))
 	}
+
+	type Result struct {
+		XMLName     xml.Name
+		Description string `xml:"description"`
+	}
+
 	for _, template := range templates {
 		if template.ProjectKey != "playg1" && template.ProjectKey != "playg2" {
 			t.Fatalf("Want playg1 or playg2 but got %s\n", template.ProjectKey)
@@ -145,11 +153,30 @@ func TestBuildTemplates(t *testing.T) {
 			t.Fatalf("Want freestyle type for android but got %s\n", template.JobType)
 		}
 
+		var v Result
+
 		if template.ReleaseJobTemplate == nil {
 			t.Fatalf("Expecting a non nil release job template: %#v\n", template)
 		}
+		// make sure the release template has the right annotation
+		err := xml.Unmarshal([]byte(template.ReleaseJobTemplate), &v)
+		if err != nil {
+			t.Fatalf("Cannot unmarshall template: %#v\n", err)
+		}
+		if v.Description != "release" {
+			t.Fatalf("Want release but got: %s\n", v.Description)
+		}
+
 		if template.ContinuousJobTemplate == nil {
 			t.Fatalf("Expecting a non nil continuous job template: %#v\n", template)
+		}
+		// make sure the continous template has the right annotation
+		err = xml.Unmarshal([]byte(template.ContinuousJobTemplate), &v)
+		if err != nil {
+			t.Fatalf("Cannot unmarshall template: %#v\n", err)
+		}
+		if v.Description != "continuous" {
+			t.Fatalf("Want continuous but got: %s\n", v.Description)
 		}
 	}
 
