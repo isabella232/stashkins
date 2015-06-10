@@ -63,10 +63,11 @@ type (
 
 	// A record in the template repository
 	JobTemplate struct {
-		ProjectKey                 string
-		Slug                       string
-		ContinuousBuildJobTemplate []byte
-		JobType                    jenkins.JobType
+		ProjectKey            string
+		Slug                  string
+		ContinuousJobTemplate []byte
+		ReleaseJobTemplate    []byte
+		JobType               jenkins.JobType
 	}
 
 	// Jobs have aspects.  Maven jobs create and delete per-branch repositories.
@@ -111,7 +112,7 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 	}
 }
 
-func (c DefaultStashkins) GetJobSummaries() ([]jenkins.JobSummary, error) {
+func (c DefaultStashkins) JobSummaries() ([]jenkins.JobSummary, error) {
 	jobSummaries, err := c.jenkinsClient.GetJobSummaries()
 	if err != nil {
 		Log.Printf("stashkins.getJobSummaries get jobs error: %v\n", err)
@@ -191,8 +192,8 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate)
 
-		if err := c.createJob(jobTemplate, newJobName, model); err != nil {
-			Log.Printf("Error creating job %s:: %#v\n", newJobName, err)
+		if err := c.createJob(jobTemplate.ContinuousJobTemplate, newJobName, model); err != nil {
+			Log.Printf("Error creating continuous job %s:: %#v\n", newJobName, err)
 			continue
 		}
 
@@ -200,15 +201,33 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 			Log.Printf("Error in post-job-create-task, but willing to continue: %#v\n", err)
 		}
 	}
+
+	// Create release job.  The only time we can know if a release job should be built is when there are zero jobs building against this repository.
+	// The reason is that there is no robust way to analyze an existing job building on origin/develop and know whether it is purposed for continuous or release.
+	if len(jobsWithGitURL) == 0 {
+		newJobName := jobTemplate.ProjectKey + "-" + jobTemplate.Slug + "-release"
+		newJobDescription := "This is a release job for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug
+		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), "develop", jobTemplate)
+		if err := c.createJob(jobTemplate.ReleaseJobTemplate, newJobName, model); err != nil {
+			Log.Printf("Error creating release job %s: %#v\n", newJobName, err)
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (c DefaultStashkins) createJob(templateRecord JobTemplate, newJobName string, jobModel interface{}) error {
-	jobTemplate, err := template.New("jobconfig").Parse(string(templateRecord.ContinuousBuildJobTemplate))
+func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
+	if data == nil {
+		Log.Printf("Template data is nil for job %s.  Skipping.\n", newJobName)
+		return nil
+	}
+
+	jobTemplate, err := template.New("jobconfig").Parse(string(data))
 	hydratedTemplate := bytes.NewBufferString("")
 	err = jobTemplate.Execute(hydratedTemplate, jobModel)
 	if err != nil {
-		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(templateRecord.ContinuousBuildJobTemplate), err)
+		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(data), err)
 		// If the template is bad, just return vs. continue because it won't work the next time through, either.
 		return err
 	}

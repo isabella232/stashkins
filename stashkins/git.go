@@ -6,7 +6,7 @@ import (
 )
 
 // Clone the repository with native git and checkout the given branch to the given directory.
-func FetchTemplates(repositoryURL, branch, dir string) error {
+func cloneTemplates(repositoryURL, branch, dir string) error {
 	if exists, err := dirExists(dir + "/.git"); err == nil && !exists {
 		return clone(repositoryURL, branch, dir)
 	} else {

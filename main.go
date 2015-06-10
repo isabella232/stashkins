@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 
 	"log"
 	"os"
@@ -56,25 +57,28 @@ func main() {
 
 	validateCommandLineArguments()
 
-	homeDirectory := os.Getenv("HOME")
-	if homeDirectory == "" {
-		Log.Fatalf("main: HOME environment variable must be set to locate local template repository clone.\n")
-	}
-	Log.Printf("HOME: %+v\n", homeDirectory)
+	templateCloneDirectory, err := ioutil.TempDir("", "stashkins-templates-")
+	defer func() {
+		os.RemoveAll(templateCloneDirectory)
+	}()
 
 	branchOperations := stashkins.NewBranchOperations(*managedBranchPrefixes)
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams, branchOperations)
 
-	jobSummaries, err := skins.GetJobSummaries()
+	jobSummaries, err := skins.JobSummaries()
 	if err != nil {
-		Log.Fatalf("main: Cannot get Jenkins job summaries: %#v\n", err)
+		Log.Printf("main: Cannot get Jenkins job summaries: %#v\n", err)
+		return
 	}
+	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
 
-	jobTemplates, err := stashkins.GetTemplates(*jobTemplateRepositoryURL, *jobTemplateBranch, homeDirectory+"/stashkins-work")
+	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
-		Log.Fatalf("main: cannot fetch job templates:  %v\n", err)
+		Log.Printf("main: cannot fetch job templates:  %v\n", err)
+		return
 	}
+	Log.Printf("Found %d Jenkins job templates\n", len(jobTemplates))
 
 	for _, jobTemplate := range jobTemplates {
 		var jobAspect stashkins.Aspect

@@ -22,23 +22,23 @@ var unknown string = `<?xml version='1.0' encoding='UTF-8'?>
 </nope>`
 
 func TestDocumentType(t *testing.T) {
-	if jobType, _ := templateType([]byte(maven)); jobType != jenkins.Maven {
+	if jobType, _ := jobType([]byte(maven)); jobType != jenkins.Maven {
 		t.Fatalf("Want jenkins.Maven type but got %v\n", jobType)
 	}
 
-	if jobType, _ := templateType([]byte(freestyle)); jobType != jenkins.Freestyle {
+	if jobType, _ := jobType([]byte(freestyle)); jobType != jenkins.Freestyle {
 		t.Fatalf("Want jenkins.Freestyle type but got %v\n", jobType)
 	}
 
-	if jobType, _ := templateType([]byte(unknown)); jobType != jenkins.Unknown {
+	if jobType, _ := jobType([]byte(unknown)); jobType != jenkins.Unknown {
 		t.Fatalf("Want jenkins.Unknown type but got %v\n", jobType)
 	}
 
-	if jobType, _ := templateType([]byte("")); jobType != jenkins.Unknown {
+	if jobType, _ := jobType([]byte("")); jobType != jenkins.Unknown {
 		t.Fatalf("Want jenkins.Unknown type but got %v\n", jobType)
 	}
 
-	if _, err := templateType([]byte("{}")); err == nil {
+	if _, err := jobType([]byte("{}")); err == nil {
 		t.Fatalf("Expecting an error parsing not-XMLt %v\n", err)
 	}
 }
