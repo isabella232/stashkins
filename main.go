@@ -10,11 +10,13 @@ import (
 	"github.com/xoom/jenkins"
 
 	"github.com/xoom/stashkins/stashkins"
+	"strings"
 )
 
 var (
 	stashBaseURL             = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL           = flag.String("jenkins-base-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
+	jenkinsJobsDirectory     = flag.String("jenkins-jobs-directory", "", "Filesystem location of Jenkins jobs directory.  Used when acquiring job summaries from the Jenkins master filesystem.")
 	jobTemplateRepositoryURL = flag.String("job-template-repository-url", "", "The Stash repository where job templates are stored..")
 	jobTemplateBranch        = flag.String("job-template-repository-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
 	userName                 = flag.String("username", "", "User capable of doing automation tasks on Stash and Jenkins")
@@ -66,12 +68,24 @@ func main() {
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams, branchOperations)
 
-	jobSummaries, err := skins.JobSummaries()
-	if err != nil {
-		Log.Printf("main: Cannot get Jenkins job summaries: %#v\n", err)
-		return
+	var jobSummaries []jenkins.JobSummary
+
+	if *jenkinsJobsDirectory == "" {
+		jobSummaries, err = skins.JobSummaries()
+		if err != nil {
+			Log.Printf("main: Cannot get Jenkins job summaries over HTTP: %#v\n", err)
+			return
+		}
+	} else {
+		jobSummaries, err = skins.JobSummariesFromFilesystem(*jenkinsJobsDirectory)
+		if err != nil {
+			Log.Printf("main: Cannot get Jenkins job summaries from filesystem: %#v\n", err)
+			return
+		}
 	}
 	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
+
+	os.Exit(0)
 
 	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
@@ -113,5 +127,9 @@ func validateCommandLineArguments() {
 
 	if *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
 		Log.Fatalf("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
+	}
+
+	if *jenkinsJobsDirectory != "" && !strings.HasPrefix(*jenkinsJobsDirectory, "/") {
+		Log.Fatalf("jenkins-jobs-directory must be specified with an absolute path: %s\n", *jenkinsJobsDirectory)
 	}
 }

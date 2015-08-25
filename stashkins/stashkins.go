@@ -121,6 +121,15 @@ func (c DefaultStashkins) JobSummaries() ([]jenkins.JobSummary, error) {
 	return jobSummaries, nil
 }
 
+func (c DefaultStashkins) JobSummariesFromFilesystem(root string) ([]jenkins.JobSummary, error) {
+	jobSummaries, err := c.jenkinsClient.GetJobSummariesFromFilesystem(root)
+	if err != nil {
+		Log.Printf("stashkins.getJobSummariesFromFilesystem get jobs error: %v\n", err)
+		return nil, err
+	}
+	return jobSummaries, nil
+}
+
 func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTemplate JobTemplate, jobAspect Aspect) error {
 
 	// Fetch the repository metadata
