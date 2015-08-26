@@ -13,7 +13,20 @@ import (
 	"github.com/ae6rt/retry"
 )
 
+// Types expected to be common to Nexus and other repo managers
 type (
+
+	// ClientOps defines the service methods on a Client.  This interface should be suffiently expressive to capture Nexus and Artifactory behavior.
+	// Integer return values are the underlying HTTP response codes.
+	IClient interface {
+		RepositoryExists(RepositoryID) (bool, error)
+		CreateSnapshotRepository(RepositoryID) (int, error)
+		DeleteRepository(RepositoryID) (int, error)
+		AddRepositoryToGroup(RepositoryID, GroupID) (int, error)
+		RemoveRepositoryFromGroup(RepositoryID, GroupID) (int, error)
+		RepositoryGroup(GroupID) (RepositoryGroup, int, error)
+	}
+
 	RepositoryID string
 
 	GroupID string
@@ -44,18 +57,7 @@ type (
 	}
 )
 
-// ClientOps defines the service methods on a Client. Integer return values are the underlying HTTP response codes.
-type IClient interface {
-	RepositoryExists(RepositoryID) (bool, error)
-	CreateSnapshotRepository(RepositoryID) (int, error)
-	DeleteRepository(RepositoryID) (int, error)
-	AddRepositoryToGroup(RepositoryID, GroupID) (int, error)
-	RemoveRepositoryFromGroup(RepositoryID, GroupID) (int, error)
-	RepositoryGroup(GroupID) (RepositoryGroup, int, error)
-}
-
-///
-
+// Nexus helper types
 type (
 	createrepo struct {
 		XMLName xml.Name       `xml:"repository"`
@@ -102,7 +104,7 @@ type (
 		ResourceURI string       `json:"resourceURI"`
 	}
 
-	Client struct {
+	NexusClient struct {
 		ClientConfig
 	}
 )
@@ -110,12 +112,12 @@ type (
 // NewClient creates a new Nexus client implementation on which subsequent service methods are called.  The baseURL typically takes
 // the form http://host:port/nexus.  username and password are the credentials of an admin user capable of creating and mutating data
 // within Nexus.
-func NewNexusClient(baseURL, username, password string) Client {
-	return Client{ClientConfig{BaseURL: baseURL, Username: username, Password: password, HttpClient: &http.Client{}}}
+func NewNexusClient(baseURL, username, password string) NexusClient {
+	return NexusClient{ClientConfig{BaseURL: baseURL, Username: username, Password: password, HttpClient: &http.Client{}}}
 }
 
 // RepositoryExists checks whether a given repository specified by repositoryID exists.
-func (client Client) RepositoryExists(repositoryID RepositoryID) (bool, error) {
+func (client NexusClient) RepositoryExists(repositoryID RepositoryID) (bool, error) {
 	retry := retry.New(3*time.Second, 3, retry.DefaultBackoffFunc)
 	var exists bool
 
@@ -149,7 +151,7 @@ func (client Client) RepositoryExists(repositoryID RepositoryID) (bool, error) {
 
 // CreateSnapshotRepository creates a new hosted Maven2 SNAPSHOT repository with the given repositoryID.  The repository name
 // will be the same as the repositoryID.  When error is nil, the integer return value is the underlying HTTP response code.
-func (client Client) CreateSnapshotRepository(repositoryID RepositoryID) (int, error) {
+func (client NexusClient) CreateSnapshotRepository(repositoryID RepositoryID) (int, error) {
 	repo := createrepo{
 		Data: CreateRepoData{
 			Id:                 repositoryID,
@@ -199,7 +201,7 @@ func (client Client) CreateSnapshotRepository(repositoryID RepositoryID) (int, e
 }
 
 // DeleteRepository deletes the repository with the given repositoryID.
-func (client Client) DeleteRepository(repositoryID RepositoryID) (int, error) {
+func (client NexusClient) DeleteRepository(repositoryID RepositoryID) (int, error) {
 	retry := retry.New(3*time.Second, 3, retry.DefaultBackoffFunc)
 	var responseCode int
 	work := func() error {
@@ -231,7 +233,7 @@ func (client Client) DeleteRepository(repositoryID RepositoryID) (int, error) {
 }
 
 // RepositoryGroup returns a representation of the given repository group ID.
-func (client Client) RepositoryGroup(groupID GroupID) (RepositoryGroup, int, error) {
+func (client NexusClient) RepositoryGroup(groupID GroupID) (RepositoryGroup, int, error) {
 	repoGroup, rc, err := client.repositoryGroup(groupID)
 	if err != nil {
 		return RepositoryGroup{}, rc, err
@@ -243,7 +245,7 @@ func (client Client) RepositoryGroup(groupID GroupID) (RepositoryGroup, int, err
 }
 
 // AddRepositoryToGroup adds the given repository specified by repositoryID to the repository group specified by groupID.
-func (client Client) AddRepositoryToGroup(repositoryID RepositoryID, groupID GroupID) (int, error) {
+func (client NexusClient) AddRepositoryToGroup(repositoryID RepositoryID, groupID GroupID) (int, error) {
 	repogroup, rc, err := client.repositoryGroup(groupID)
 	if err != nil {
 		return rc, err
@@ -294,7 +296,7 @@ func (client Client) AddRepositoryToGroup(repositoryID RepositoryID, groupID Gro
 }
 
 // DeleteRepositoryFromGroup removes the given repository specified by repositoryID from the repository group specified by groupID.
-func (client Client) RemoveRepositoryFromGroup(repositoryID RepositoryID, groupID GroupID) (int, error) {
+func (client NexusClient) RemoveRepositoryFromGroup(repositoryID RepositoryID, groupID GroupID) (int, error) {
 	repogroup, rc, err := client.repositoryGroup(groupID)
 	if err != nil {
 		return rc, err
@@ -345,7 +347,7 @@ func (client Client) RemoveRepositoryFromGroup(repositoryID RepositoryID, groupI
 	return responseCode, retry.Try(work)
 }
 
-func (client Client) repositoryGroup(groupID GroupID) (repoGroup, int, error) {
+func (client NexusClient) repositoryGroup(groupID GroupID) (repoGroup, int, error) {
 	retry := retry.New(3*time.Second, 3, retry.DefaultBackoffFunc)
 	var data []byte
 	var responseCode int

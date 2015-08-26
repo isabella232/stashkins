@@ -30,7 +30,7 @@ func TestRepoExists(t *testing.T) {
 	}))
 	defer server.Close()
 
-	var client Client
+	var client NexusClient
 	client = NewNexusClient(server.URL, "user", "password")
 	exists, err := client.RepositoryExists("somerepo")
 	if err != nil {

@@ -55,7 +55,7 @@ type (
 
 		stashClient   stash.Stash
 		jenkinsClient jenkins.Jenkins
-		NexusClient   maventools.Client
+		NexusClient   maventools.NexusClient
 
 		branchOperations BranchOperations
 	}

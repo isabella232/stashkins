@@ -10,12 +10,12 @@ import (
 
 type MavenAspect struct {
 	mavenRepositoryParams MavenRepositoryParams
-	client                maventools.Client
+	client                maventools.NexusClient
 	branchOperations      BranchOperations
 	Aspect
 }
 
-func NewMavenAspect(params MavenRepositoryParams, client maventools.Client, branchOperations BranchOperations) Aspect {
+func NewMavenAspect(params MavenRepositoryParams, client maventools.NexusClient, branchOperations BranchOperations) Aspect {
 	return MavenAspect{mavenRepositoryParams: params, client: client, branchOperations: branchOperations}
 }
 

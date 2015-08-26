@@ -11,7 +11,7 @@ import (
 func TestMakeMavenModel(t *testing.T) {
 	maven := stashkins.NewMavenAspect(
 		stashkins.MavenRepositoryParams{WebClientParams: stashkins.WebClientParams{URL: "http://maven.example.com/nexus"}, FeatureBranchRepositoryGroupID: "repoId"},
-		maventools.Client{},
+		maventools.NexusClient{},
 		stashkins.BranchOperations{},
 	)
 
