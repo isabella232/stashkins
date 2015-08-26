@@ -111,7 +111,7 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 	}
 }
 
-func (c DefaultStashkins) JobSummaries() ([]jenkins.JobSummary, error) {
+func (c DefaultStashkins) JobSummariesOverHTTP() ([]jenkins.JobSummary, error) {
 	jobSummaries, err := c.jenkinsClient.GetJobSummaries()
 	if err != nil {
 		Log.Printf("stashkins.getJobSummaries get jobs error: %v\n", err)

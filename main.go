@@ -71,7 +71,7 @@ func main() {
 	var jobSummaries []jenkins.JobSummary
 
 	if *jenkinsJobsDirectory == "" {
-		jobSummaries, err = skins.JobSummaries()
+		jobSummaries, err = skins.JobSummariesOverHTTP()
 		if err != nil {
 			Log.Printf("main: Cannot get Jenkins job summaries over HTTP: %#v\n", err)
 			return
