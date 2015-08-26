@@ -78,7 +78,7 @@ func TestDeleteFromGroup(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	rc, err := client.RemoveRepositoryFromGroup("plat.trnk.trnk679", "agroup")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)

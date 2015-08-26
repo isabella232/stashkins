@@ -110,7 +110,7 @@ type (
 // NewClient creates a new Nexus client implementation on which subsequent service methods are called.  The baseURL typically takes
 // the form http://host:port/nexus.  username and password are the credentials of an admin user capable of creating and mutating data
 // within Nexus.
-func NewClient(baseURL, username, password string) Client {
+func NewNexusClient(baseURL, username, password string) Client {
 	return Client{ClientConfig{BaseURL: baseURL, Username: username, Password: password, HttpClient: &http.Client{}}}
 }
 

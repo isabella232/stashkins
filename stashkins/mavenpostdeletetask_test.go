@@ -25,7 +25,7 @@ func TestMavenPostDeleteTasks(t *testing.T) {
 	params := stashkins.MavenRepositoryParams{
 		FeatureBranchRepositoryGroupID: "repoID",
 	}
-	nexusClient := maventools.NewClient(testServer.URL, "u", "p")
+	nexusClient := maventools.NewNexusClient(testServer.URL, "u", "p")
 
 	aspect := stashkins.NewMavenAspect(params, nexusClient, stashkins.BranchOperations{})
 	aspect.PostJobDeleteTasks("jobName", "ssh://git@example.com/dot.git", "origin/feature/1", stashkins.JobTemplate{ProjectKey: "PROJ", Slug: "slug"})

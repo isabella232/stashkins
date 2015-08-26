@@ -98,7 +98,7 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 	}
 	jenkinsClient := jenkins.NewClient(jenkinsURL, jenkinsParams.UserName, jenkinsParams.Password)
 
-	nexusClient := maventools.NewClient(nexusParams.URL, nexusParams.UserName, nexusParams.Password)
+	nexusClient := maventools.NewNexusClient(nexusParams.URL, nexusParams.UserName, nexusParams.Password)
 
 	return DefaultStashkins{
 		stashParams:      stashParams,

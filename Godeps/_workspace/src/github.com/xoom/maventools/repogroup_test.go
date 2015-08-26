@@ -53,7 +53,7 @@ func TestGetRepoGroup(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	group, rc, err := client.repositoryGroup("snapshotgroup")
 
 	if err != nil {
@@ -107,7 +107,7 @@ func TestGetRepoGroupNotFound(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	_, rc, err := client.repositoryGroup("snapshotgroup")
 
 	if err == nil {

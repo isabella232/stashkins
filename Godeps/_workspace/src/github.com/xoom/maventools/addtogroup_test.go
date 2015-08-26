@@ -93,7 +93,7 @@ func TestAddToGroup(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	rc, err := client.AddRepositoryToGroup("somerepo", "agroup")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)

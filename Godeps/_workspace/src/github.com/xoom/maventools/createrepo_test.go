@@ -79,7 +79,7 @@ func TestCreateRepo(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	i, err := client.CreateSnapshotRepository("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
@@ -95,7 +95,7 @@ func TestCreateRepoWithError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	i, err := client.CreateSnapshotRepository("somerepo")
 	if err == nil {
 		t.Fatalf("Expecting an error but did not get one\n")
