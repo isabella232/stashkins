@@ -11,8 +11,8 @@
 			"Rev": "0f9a0909ce3fdf6ab73c8b068fff3937c705d89e"
 		},
 		{
-			"ImportPath": "github.com/xoom/maventools/nexus",
-			"Rev": "c9566b2dfd7443a652aea1edb347b897c52afb49"
+			"ImportPath": "github.com/xoom/maventools",
+			"Rev": "cbc8e32c88afac50600604a7d6e47e38263a3bb5"
 		}
 	]
 }

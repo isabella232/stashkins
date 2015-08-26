@@ -10,13 +10,10 @@ all: clean binaries
 test:
 	godep go test ./...
 
-binaries: tools deps test 
+binaries: tools test 
 	GOOS=darwin GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-darwin-$(ARCH)
 	GOOS=linux GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-linux-$(ARCH)
 	GOOS=windows GOARCH=$(ARCH) godep go build -ldflags "$(LD_FLAGS)" -o $(NAME)-windows-$(ARCH).exe
-
-deps:
-	go get ./...
 
 tools:
 	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep

@@ -1,12 +1,10 @@
-package nexus
+package maventools
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/xoom/maventools"
 )
 
 func TestRepoExists(t *testing.T) {
@@ -32,7 +30,7 @@ func TestRepoExists(t *testing.T) {
 	}))
 	defer server.Close()
 
-	var client maventools.Client
+	var client Client
 	client = NewClient(server.URL, "user", "password")
 	exists, err := client.RepositoryExists("somerepo")
 	if err != nil {

@@ -10,7 +10,6 @@ import (
 
 	"github.com/xoom/jenkins"
 	"github.com/xoom/maventools"
-	"github.com/xoom/maventools/nexus"
 	"github.com/xoom/stash"
 )
 
@@ -99,7 +98,7 @@ func NewStashkins(stashParams, jenkinsParams WebClientParams, nexusParams MavenR
 	}
 	jenkinsClient := jenkins.NewClient(jenkinsURL, jenkinsParams.UserName, jenkinsParams.Password)
 
-	nexusClient := nexus.NewClient(nexusParams.URL, nexusParams.UserName, nexusParams.Password)
+	nexusClient := maventools.NewClient(nexusParams.URL, nexusParams.UserName, nexusParams.Password)
 
 	return DefaultStashkins{
 		stashParams:      stashParams,

@@ -1,4 +1,4 @@
-package nexus
+package maventools
 
 import (
 	"net/http"
