@@ -226,8 +226,8 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 }
 
 func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
-	if data == nil {
-		return fmt.Errorf("Template data is nil for job %s.  Is template XML file spelled correctly?\n", newJobName)
+	if len(data) == 0 {
+		return fmt.Errorf("Template []byte length==0 for job %s.  Is template XML file spelled correctly?\n", newJobName)
 	}
 
 	jobTemplate, err := template.New("jobconfig").Parse(string(data))
