@@ -52,7 +52,7 @@ func init() {
 }
 
 func main() {
-	log.Printf("%s\n", buildInfo)
+	Log.Printf("%s\n", buildInfo)
 	if *versionFlag {
 		os.Exit(0)
 	}
@@ -84,6 +84,8 @@ func main() {
 		}
 	}
 	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
+
+	os.Exit(0)
 
 	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
