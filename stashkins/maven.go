@@ -32,7 +32,7 @@ func (maven MavenAspect) MakeModel(newJobName, newJobDescription, gitRepositoryU
 
 func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
 	if !maven.branchOperations.isFeatureBranch(branch) {
-		Log.Printf("maven postdelete skipping tasks for non-feature branch %s:\n", branch)
+		Log.Printf("Maven postDeleter skipping tasks for non-feature branch %s:\n", branch)
 		return nil
 	}
 
@@ -41,14 +41,14 @@ func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branch st
 		Log.Printf("Maven postDeleter failed to delete Maven repository %v: %+v\n", repositoryID, err)
 		return err
 	} else {
-		Log.Printf("Deleted Maven repository %v\n", repositoryID)
+		Log.Printf("Maven postDeleter deleted Maven repository %v\n", repositoryID)
 	}
 	return nil
 }
 
 func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
 	if !maven.branchOperations.isFeatureBranch(branch) {
-		Log.Printf("maven postcreator skipping tasks for non-feature branch %s:\n", branch)
+		Log.Printf("Maven postCreator skipping tasks for non-feature branch %s\n", branch)
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 			return err
 		} else {
 			if rc == 201 {
-				Log.Printf("Created Maven repositoryID %v\n", repositoryID)
+				Log.Printf("Maven postCreator created Maven repositoryID %v\n", repositoryID)
 			}
 		}
 	} else {
