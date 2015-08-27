@@ -1,6 +1,12 @@
 package maventools
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+	"os"
+)
+
+var Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 
 // Types expected to be common to Nexus and other repo managers
 type (

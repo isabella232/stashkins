@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -208,11 +207,11 @@ func (client NexusClient) AddRepositoryToGroup(repositoryID RepositoryID, groupI
 
 	// If there is no error preceding this, rc should always be 200.  But say something if it isn't.
 	if rc != 200 {
-		log.Printf("Nexus Client.AddRepositoryToGroup() response code: %d\n", rc)
+		Log.Printf("Nexus Client.AddRepositoryToGroup() response code: %d\n", rc)
 	}
 
 	if repoIsInGroup(repositoryID, repogroup) {
-		log.Printf("Nexus Client.AddRepositoryToGroup(): RepositoryID %v is already in repository group.  Will not PUT over HTTP.\n", repositoryID)
+		Log.Printf("Nexus Client.AddRepositoryToGroup(): RepositoryID %v is already in repository group.  Will not PUT over HTTP.\n", repositoryID)
 		return 0, nil
 	}
 
@@ -257,7 +256,7 @@ func (client NexusClient) RemoveRepositoryFromGroup(repositoryID RepositoryID, g
 		return rc, err
 	}
 	if rc != 200 {
-		log.Printf("Nexus Client.AddRepositoryToGroup() response code: %d\n", rc)
+		Log.Printf("Nexus Client.AddRepositoryToGroup() response code: %d\n", rc)
 	}
 
 	if repoIsNotInGroup(repositoryID, repogroup) {
