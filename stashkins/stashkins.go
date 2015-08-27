@@ -201,7 +201,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate)
 
 		if err := c.createJob(jobTemplate.ContinuousJobTemplate, newJobName, model); err != nil {
-			Log.Printf("Error creating continuous job %s:: %#v\n", newJobName, err)
+			Log.Printf("Error creating continuous job %s: %#v\n", newJobName, err)
 			continue
 		}
 
@@ -227,8 +227,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 
 func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
 	if data == nil {
-		Log.Printf("Template data is nil for job %s.  Skipping.\n", newJobName)
-		return nil
+		return fmt.Errorf("Template data is nil for job %s.  Is template XML file spelled correctly?\n", newJobName)
 	}
 
 	jobTemplate, err := template.New("jobconfig").Parse(string(data))

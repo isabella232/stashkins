@@ -85,8 +85,6 @@ func main() {
 	}
 	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
 
-	os.Exit(0)
-
 	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
 		Log.Printf("main: cannot fetch job templates:  %v\n", err)
@@ -109,6 +107,7 @@ func main() {
 			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
 		}
 	}
+	Log.Println("Stashkins has finished (__finish).")
 }
 
 func validateCommandLineArguments() {

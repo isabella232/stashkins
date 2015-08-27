@@ -78,8 +78,6 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 	} else {
 		if rc == 200 {
 			Log.Printf("Maven repositoryID %v added to repository groupID %s\n", repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
-		} else {
-			Log.Printf("Warning:  non-200 response code == %d when adding Maven repositoryID %v to repository groupID %s\n", rc, repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
 		}
 	}
 	return nil
