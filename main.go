@@ -85,8 +85,6 @@ func main() {
 	}
 	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
 
-	os.Exit(0)
-
 	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
 		Log.Printf("main: cannot fetch job templates:  %v\n", err)
