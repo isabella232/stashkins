@@ -185,7 +185,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		}
 
 		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, jobTemplate); err != nil {
-			Log.Printf("Error in post-job-delete-task, but willing to continue: %#v\n", err)
+			Log.Printf("Error in post-job-delete-task, but willing to continue: %v\n", err)
 		}
 	}
 
@@ -201,12 +201,12 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate)
 
 		if err := c.createJob(jobTemplate.ContinuousJobTemplate, newJobName, model); err != nil {
-			Log.Printf("Error creating continuous job %s: %#v\n", newJobName, err)
+			Log.Printf("Warning: while creating continuous job %s: %v\n", newJobName, err)
 			continue
 		}
 
 		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate); err != nil {
-			Log.Printf("Error in post-job-create-task, but willing to continue: %#v\n", err)
+			Log.Printf("Error in post-job-create-task, but willing to continue: %v\n", err)
 		}
 	}
 
@@ -217,7 +217,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		newJobDescription := "This is a release job for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), "develop", jobTemplate)
 		if err := c.createJob(jobTemplate.ReleaseJobTemplate, newJobName, model); err != nil {
-			Log.Printf("Error creating release job %s: %#v\n", newJobName, err)
+			Log.Printf("Warning: while creating release job %s: %v\n", newJobName, err)
 			return err
 		}
 	}
@@ -227,7 +227,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 
 func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
 	if len(data) == 0 {
-		return fmt.Errorf("Template []byte length==0 for job %s.  Is template XML file spelled correctly?\n", newJobName)
+		return fmt.Errorf("Template []byte length==0 for job %s.  Is template XML file missing or spelled incorrectly?", newJobName)
 	}
 
 	jobTemplate, err := template.New("jobconfig").Parse(string(data))
@@ -242,7 +242,7 @@ func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel int
 	// Create the job
 	err = c.jenkinsClient.CreateJob(newJobName, string(hydratedTemplate.Bytes()))
 	if err != nil {
-		Log.Printf("stashkins.createJob failed to create job %+v, continuing...: error==%#v\n", newJobName, err)
+		Log.Printf("stashkins.createJob failed to create job %v, continuing...: error==%v\n", newJobName, err)
 		return err
 	} else {
 		Log.Printf("Created job %s\n", newJobName)
