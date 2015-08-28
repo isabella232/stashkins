@@ -69,6 +69,11 @@ type (
 		JobType               jenkins.JobType
 	}
 
+	JobDescriptorNG struct {
+		JobName string
+		Branch  stash.Branch
+	}
+
 	// Jobs have aspects.  Maven jobs create and delete per-branch repositories.
 	Aspect interface {
 		MakeModel(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) interface{}
@@ -148,6 +153,10 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	// Calculate the specification CI job names which must by design exist for this project.
 	specCIJobs := c.calculateSpecCIJobs(jobTemplate.ProjectKey, jobTemplate.Slug, stashBranches)
 	fmt.Println(specCIJobs)
+
+	// Calculate missing jobs
+	missingJobs := c.calculateMissingJobs(specCIJobs, jobSummaries)
+	fmt.Println(missingJobs)
 
 	// Compile list of jobs that build anywhere on this Git repository
 	jobsWithGitURL := make([]jenkins.JobSummary, 0)
@@ -229,19 +238,38 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	return nil
 }
 
-func (c DefaultStashkins) calculateSpecCIJobs(projectKey, slug string, branches map[string]stash.Branch) []string {
-	specCIJobNames := make([]string, 0)
-	for branch, _ := range branches {
-		if c.branchOperations.isBranchManaged(branch) {
+func (c DefaultStashkins) calculateSpecCIJobs(projectKey, slug string, branches map[string]stash.Branch) []JobDescriptorNG {
+	specCIJobNames := make([]JobDescriptorNG, 0)
+	for _, branch := range branches {
+		if c.branchOperations.isBranchManaged(branch.DisplayID) {
 			// For a branch with Stash displayID feature/12, branchBaseName will be "feature" and branchSuffix will be "-12".
 			// For a branch with Stash displayID develop, branchBaseName will be develop and branchSuffix will be an empty string.
-			branchBaseName, branchSuffix := c.branchOperations.suffixer(branch)
+			branchBaseName, branchSuffix := c.branchOperations.suffixer(branch.DisplayID)
 			newJobName := projectKey + "-" + slug + "-continuous-" + branchBaseName + branchSuffix
-			specCIJobNames = append(specCIJobNames, newJobName)
+			descriptor := JobDescriptorNG{JobName: newJobName, Branch: branch}
+			specCIJobNames = append(specCIJobNames, descriptor)
 		}
 	}
 	return specCIJobNames
 }
+
+func (c DefaultStashkins) calculateMissingJobs(specCIJobs []JobDescriptorNG, jobSummaries []jenkins.JobSummary) []JobDescriptorNG {
+	missingJobs := make([]JobDescriptorNG, 0)
+	for _, specJob := range specCIJobs {
+		var foundIt bool = false
+		for _, existingJob := range jobSummaries {
+			if existingJob.JobDescriptor.Name == specJob.JobName {
+				foundIt = true
+				break
+			}
+		}
+		if !foundIt {
+			missingJobs = append(missingJobs, specJob)
+		}
+	}
+	return missingJobs
+}
+
 
 func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
 	if len(data) == 0 {

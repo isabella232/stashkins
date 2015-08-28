@@ -17,10 +17,10 @@ func TestCalculateSpecCIJobs(t *testing.T) {
 	}
 
 	// Calculate spec CI jobs
-	specJobs := skins.calculateSpecCIJobs("proj", "somelib", branches)
+	specJobDescriptors := skins.calculateSpecCIJobs("proj", "somelib", branches)
 
-	if len(specJobs) != 3 {
-		t.Fatalf("Want 3 but got %d\n", len(specJobs))
+	if len(specJobDescriptors) != 3 {
+		t.Fatalf("Want 3 but got %d\n", len(specJobDescriptors))
 	}
 
 	// Verify that each expected job name is in the spec list of job names
@@ -30,8 +30,8 @@ func TestCalculateSpecCIJobs(t *testing.T) {
 		"proj-somelib-continuous-hotfix-issue-99",
 	} {
 		var foundIt bool = false
-		for _, jobName := range specJobs {
-			if jobName == expectedJobName {
+		for _, jobName := range specJobDescriptors {
+			if jobName.JobName == expectedJobName {
 				foundIt = true
 				break
 			}
