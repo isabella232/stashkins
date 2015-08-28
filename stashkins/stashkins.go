@@ -145,6 +145,10 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		return err
 	}
 
+	// Calculate the specification CI job names which must by design exist for this project.
+	specCIJobs := c.calculateSpecCIJobs(jobTemplate.ProjectKey, jobTemplate.Slug, stashBranches)
+	fmt.Println(specCIJobs)
+
 	// Compile list of jobs that build anywhere on this Git repository
 	jobsWithGitURL := make([]jenkins.JobSummary, 0)
 	for _, jobSummary := range jobSummaries {
@@ -191,7 +195,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 
 	// Create missing jobs
 	for _, branch := range branchesNotBuilt {
-		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "12".
+		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "-12".
 		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
 		branchBaseName, branchSuffix := c.branchOperations.suffixer(branch)
 
@@ -223,6 +227,20 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	}
 
 	return nil
+}
+
+func (c DefaultStashkins) calculateSpecCIJobs(projectKey, slug string, branches map[string]stash.Branch) []string {
+	specCIJobNames := make([]string, 0)
+	for branch, _ := range branches {
+		if c.branchOperations.isBranchManaged(branch) {
+			// For a branch with Stash displayID feature/12, branchBaseName will be "feature" and branchSuffix will be "-12".
+			// For a branch with Stash displayID develop, branchBaseName will be develop and branchSuffix will be an empty string.
+			branchBaseName, branchSuffix := c.branchOperations.suffixer(branch)
+			newJobName := projectKey + "-" + slug + "-continuous-" + branchBaseName + branchSuffix
+			specCIJobNames = append(specCIJobNames, newJobName)
+		}
+	}
+	return specCIJobNames
 }
 
 func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
