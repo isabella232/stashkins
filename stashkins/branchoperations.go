@@ -97,3 +97,16 @@ func (c BranchOperations) stripLeadingOrigin(branch string) string {
 	}
 	return branch
 }
+
+func (c BranchOperations) recoverBranchFromCIJobName(jobName string) string {
+	parts := strings.Split(jobName, "-continuous-")
+	p := parts[1]
+	return strings.Replace(p, "-", "/", 1)
+}
+
+func (c BranchOperations) canonicalCIJobName(projectKey, slug string, branch stash.Branch) string {
+	// For a branch with Stash displayID feature/12, branchBaseName will be "feature" and branchSuffix will be "-12".
+	// For a branch with Stash displayID develop, branchBaseName will be develop and branchSuffix will be an empty string.
+	branchBaseName, branchSuffix := c.suffixer(branch.DisplayID)
+	return projectKey + "-" + slug + "-continuous-" + branchBaseName + branchSuffix
+}

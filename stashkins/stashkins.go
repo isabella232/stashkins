@@ -156,45 +156,21 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	fmt.Println(specCIJobs)
 
 	// Calculate missing jobs
-	missingJobs := c.calculateMissingCIJobs(specCIJobs, jobSummaries)
-	fmt.Println(missingJobs)
+	missingCIJobs := c.calculateMissingCIJobs(specCIJobs, jobSummaries)
+	fmt.Println(missingCIJobs)
 
 	// Calculate obsolete jobs
-	obsoleteJobs := c.calculateObsoleteCIJobs(specCIJobs, jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries)
-	fmt.Println(obsoleteJobs)
-
-	// Compile list of jobs that build anywhere on this Git repository
-	jobsWithGitURL := make([]jenkins.JobSummary, 0)
-	for _, jobSummary := range jobSummaries {
-		if c.isTargetJob(jobSummary, gitRepository.SshUrl()) {
-			jobsWithGitURL = append(jobsWithGitURL, jobSummary)
-		}
-	}
-
-	// Compile list of obsolete jobs
-	oldJobs := make([]jenkins.JobSummary, 0)
-	for _, jobSummary := range jobsWithGitURL {
-		if c.branchOperations.shouldDeleteJob(jobSummary, stashBranches) {
-			oldJobs = append(oldJobs, jobSummary)
-		}
-	}
-
-	// Compile list of missing jobs
-	branchesNotBuilt := make([]string, 0)
-	for branch, _ := range stashBranches {
-		if c.branchOperations.shouldCreateJob(jobsWithGitURL, branch) {
-			branchesNotBuilt = append(branchesNotBuilt, branch)
-		}
-	}
+	obsoleteCIJobs := c.calculateObsoleteCIJobs(specCIJobs, jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries)
+	fmt.Println(obsoleteCIJobs)
 
 	Log.Printf("Number of Git branches for %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(stashBranches))
-	Log.Printf("Number of jobs building some branch against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(jobsWithGitURL))
-	Log.Printf("Number of old jobs built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(oldJobs))
-	Log.Printf("Number of jobs to be created against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(branchesNotBuilt))
+	Log.Printf("Number of CI specification jobs to be built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(specCIJobs))
+	Log.Printf("Number of jobs to be created against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(missingCIJobs))
+	Log.Printf("Number of old jobs built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(obsoleteCIJobs))
 
 	// Delete old jobs
-	for _, jobSummary := range oldJobs {
-		jobName := jobSummary.JobDescriptor.Name
+	for _, obsoleteJob := range obsoleteCIJobs {
+		jobName := obsoleteJob.JobName
 		if err := c.jenkinsClient.DeleteJob(jobName); err != nil {
 			Log.Printf("stashkins.ReconcileJobs error deleting obsolete job %s, continuing:  %+v\n", jobName, err)
 			continue
@@ -202,36 +178,31 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
 
-		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), jobSummary.Branch, jobTemplate); err != nil {
+		branchName := c.branchOperations.recoverBranchFromCIJobName(jobName)
+		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), branchName, jobTemplate); err != nil {
 			Log.Printf("Error in post-job-delete-task, but willing to continue: %v\n", err)
 		}
 	}
 
 	// Create missing jobs
-	for _, branch := range branchesNotBuilt {
-		// For a branch feature/12, branchBaseName will be "feature" and branchSuffix will be "-12".
-		// For a branch named develop, branchBaseName will be develop and branchSuffix will be an empty string.
-		branchBaseName, branchSuffix := c.branchOperations.suffixer(branch)
+	for _, missingJob := range missingCIJobs {
+		newJobName := c.branchOperations.canonicalCIJobName(jobTemplate.ProjectKey, jobTemplate.Slug, missingJob.Branch)
+		newJobDescription := "This is a continuous build for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug + ", branch " + missingJob.Branch.DisplayID
 
-		newJobName := jobTemplate.ProjectKey + "-" + jobTemplate.Slug + "-continuous-" + branchBaseName + branchSuffix
-		newJobDescription := "This is a continuous build for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug + ", branch " + branch
-
-		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate)
+		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), missingJob.Branch.DisplayID, jobTemplate)
 
 		if err := c.createJob(jobTemplate.ContinuousJobTemplate, newJobName, model); err != nil {
 			Log.Printf("Warning: while creating continuous job %s: %v\n", newJobName, err)
 			continue
 		}
 
-		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), branch, jobTemplate); err != nil {
+		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), missingJob.Branch.DisplayID, jobTemplate); err != nil {
 			Log.Printf("Error in post-job-create-task, but willing to continue: %v\n", err)
 		}
 	}
 
-	// Create release job.  The only time we can know if a release job should be built is when there are zero jobs building against this repository.
-	// The reason is that there is no robust way to analyze an existing job building on origin/develop and know whether it is purposed for continuous or release.
-	if len(jobsWithGitURL) == 0 {
-		newJobName := jobTemplate.ProjectKey + "-" + jobTemplate.Slug + "-release"
+	if c.shouldCreateReleaseJob(jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries) {
+		newJobName := c.canonicalReleaseJobName(jobTemplate.ProjectKey, jobTemplate.Slug)
 		newJobDescription := "This is a release job for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), "develop", jobTemplate)
 		if err := c.createJob(jobTemplate.ReleaseJobTemplate, newJobName, model); err != nil {
@@ -243,14 +214,27 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	return nil
 }
 
+func (c DefaultStashkins) shouldCreateReleaseJob(projectKey, slug string, jobSummaries []jenkins.JobSummary) bool {
+	releaseJobName := c.canonicalReleaseJobName(projectKey, slug)
+	var foundIt bool = false
+	for _, v := range jobSummaries {
+		if releaseJobName == v.JobDescriptor.Name {
+			foundIt = true
+			break
+		}
+	}
+	return !foundIt
+}
+
+func (c DefaultStashkins) canonicalReleaseJobName(projectKey, slug string) string {
+	return fmt.Sprintf("%s-%s-release", projectKey, slug)
+}
+
 func (c DefaultStashkins) calculateSpecCIJobs(projectKey, slug string, branches map[string]stash.Branch) []JobDescriptorNG {
 	specCIJobNames := make([]JobDescriptorNG, 0)
 	for _, branch := range branches {
 		if c.branchOperations.isBranchManaged(branch.DisplayID) {
-			// For a branch with Stash displayID feature/12, branchBaseName will be "feature" and branchSuffix will be "-12".
-			// For a branch with Stash displayID develop, branchBaseName will be develop and branchSuffix will be an empty string.
-			branchBaseName, branchSuffix := c.branchOperations.suffixer(branch.DisplayID)
-			newJobName := projectKey + "-" + slug + "-continuous-" + branchBaseName + branchSuffix
+			newJobName := c.branchOperations.canonicalCIJobName(projectKey, slug, branch)
 			descriptor := JobDescriptorNG{JobName: newJobName, Branch: branch}
 			specCIJobNames = append(specCIJobNames, descriptor)
 		}

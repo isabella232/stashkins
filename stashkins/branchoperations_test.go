@@ -128,5 +128,12 @@ func TestStripLeadingOrigin(t *testing.T) {
 	if v != "develop" {
 		t.Fatalf("Want develop but got %s\n", v)
 	}
+}
 
+func TestRecoverBranchNameFromCIJobName(t *testing.T) {
+	s := BranchOperations{}
+	branchName := s.recoverBranchFromCIJobName("proj-slug-continuous-feature-PRJ-44")
+	if branchName != "feature/PRJ-44" {
+		t.Fatalf("Want feature/PRJ-44 but got %s\n", branchName)
+	}
 }
