@@ -153,15 +153,12 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 
 	// Calculate the specification CI job names which must by design exist for this project.
 	specCIJobs := c.calculateSpecCIJobs(jobTemplate.ProjectKey, jobTemplate.Slug, stashBranches)
-	fmt.Println(specCIJobs)
 
 	// Calculate missing jobs
 	missingCIJobs := c.calculateMissingCIJobs(specCIJobs, jobSummaries)
-	fmt.Println(missingCIJobs)
 
 	// Calculate obsolete jobs
 	obsoleteCIJobs := c.calculateObsoleteCIJobs(specCIJobs, jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries)
-	fmt.Println(obsoleteCIJobs)
 
 	Log.Printf("Number of Git branches for %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(stashBranches))
 	Log.Printf("Number of CI specification jobs to be built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(specCIJobs))
