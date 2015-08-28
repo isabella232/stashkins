@@ -20,7 +20,7 @@ func TestCalculateMissingJobs(t *testing.T) {
 		},
 	}
 
-	missingJobs := DefaultStashkins{}.calculateMissingJobs(specCIJobs, jobSummaries)
+	missingJobs := DefaultStashkins{}.calculateMissingCIJobs(specCIJobs, jobSummaries)
 	if len(missingJobs) != 1 {
 		t.Fatalf("Want 1 but got %d\n", len(missingJobs))
 	}

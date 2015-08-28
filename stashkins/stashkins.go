@@ -11,6 +11,7 @@ import (
 	"github.com/xoom/jenkins"
 	"github.com/xoom/maventools"
 	"github.com/xoom/stash"
+	"strings"
 )
 
 type (
@@ -155,8 +156,12 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	fmt.Println(specCIJobs)
 
 	// Calculate missing jobs
-	missingJobs := c.calculateMissingJobs(specCIJobs, jobSummaries)
+	missingJobs := c.calculateMissingCIJobs(specCIJobs, jobSummaries)
 	fmt.Println(missingJobs)
+
+	// Calculate obsolete jobs
+	obsoleteJobs := c.calculateObsoleteCIJobs(specCIJobs, jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries)
+	fmt.Println(obsoleteJobs)
 
 	// Compile list of jobs that build anywhere on this Git repository
 	jobsWithGitURL := make([]jenkins.JobSummary, 0)
@@ -253,7 +258,7 @@ func (c DefaultStashkins) calculateSpecCIJobs(projectKey, slug string, branches 
 	return specCIJobNames
 }
 
-func (c DefaultStashkins) calculateMissingJobs(specCIJobs []JobDescriptorNG, jobSummaries []jenkins.JobSummary) []JobDescriptorNG {
+func (c DefaultStashkins) calculateMissingCIJobs(specCIJobs []JobDescriptorNG, jobSummaries []jenkins.JobSummary) []JobDescriptorNG {
 	missingJobs := make([]JobDescriptorNG, 0)
 	for _, specJob := range specCIJobs {
 		var foundIt bool = false
@@ -270,6 +275,30 @@ func (c DefaultStashkins) calculateMissingJobs(specCIJobs []JobDescriptorNG, job
 	return missingJobs
 }
 
+func (c DefaultStashkins) jobNameSpace(projectKey, slug string) string {
+	return fmt.Sprintf("%s-%s-continuous-", projectKey, slug)
+}
+
+func (c DefaultStashkins) jobInNameSpace(jobName, projectKey, slug string) bool {
+	return strings.HasPrefix(jobName, c.jobNameSpace(projectKey, slug))
+}
+
+func (c DefaultStashkins) calculateObsoleteCIJobs(specCIJobs []JobDescriptorNG, projectKey, slug string, jobSummaries []jenkins.JobSummary) []JobDescriptorNG {
+	obsoleteJobs := make([]JobDescriptorNG, 0)
+	for _, existingJob := range jobSummaries {
+		var jobNotInSpec bool = true
+		for _, specJob := range specCIJobs {
+			if existingJob.JobDescriptor.Name == specJob.JobName {
+				jobNotInSpec = false
+				break
+			}
+		}
+		if jobNotInSpec && c.jobInNameSpace(existingJob.JobDescriptor.Name, projectKey, slug) {
+			obsoleteJobs = append(obsoleteJobs)
+		}
+	}
+	return obsoleteJobs
+}
 
 func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel interface{}) error {
 	if len(data) == 0 {
