@@ -59,17 +59,13 @@ func main() {
 
 	validateCommandLineArguments()
 
-	templateCloneDirectory, err := ioutil.TempDir("", "stashkins-templates-")
-	defer func() {
-		os.RemoveAll(templateCloneDirectory)
-	}()
-
 	branchOperations := stashkins.NewBranchOperations(*managedBranchPrefixes)
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams, branchOperations)
 
 	var jobSummaries []jenkins.JobSummary
 
+	var err error
 	if *jenkinsJobsDirectory == "" {
 		jobSummaries, err = skins.JobSummariesOverHTTP()
 		if err != nil {
@@ -84,6 +80,14 @@ func main() {
 		}
 	}
 	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
+
+	templateCloneDirectory, err := ioutil.TempDir("", "stashkins-templates-")
+	if err != nil {
+		Log.Fatalln(err)
+	}
+	defer func() {
+		os.RemoveAll(templateCloneDirectory)
+	}()
 
 	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
@@ -113,19 +117,19 @@ func main() {
 func validateCommandLineArguments() {
 
 	if *userName == "" || *password == "" {
-		Log.Fatalf("username and password are required")
+		Log.Fatalln("username and password are required")
 	}
 
 	if *jobTemplateRepositoryURL == "" {
-		Log.Fatalf("template-repository-url is required")
+		Log.Fatalln("template-repository-url is required")
 	}
 
 	if *mavenRepositoryGroupID == "" {
-		Log.Fatalf("maven-repo-repository-groupID is required")
+		Log.Fatalln("maven-repo-repository-groupID is required")
 	}
 
 	if *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
-		Log.Fatalf("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
+		Log.Fatalln("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required")
 	}
 
 	if *jenkinsJobsDirectory != "" && !strings.HasPrefix(*jenkinsJobsDirectory, "/") {
