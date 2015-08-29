@@ -161,9 +161,9 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	obsoleteCIJobs := c.calculateObsoleteCIJobs(specCIJobs, jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries)
 
 	Log.Printf("Number of Git branches for %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(stashBranches))
-	Log.Printf("Number of CI specification jobs to be built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(specCIJobs))
-	Log.Printf("Number of jobs to be created against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(missingCIJobs))
-	Log.Printf("Number of old jobs built against %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(obsoleteCIJobs))
+	Log.Printf("Number of CI specification jobs required for %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(specCIJobs))
+	Log.Printf("Number of outstanding CI jobs to be created for %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(missingCIJobs))
+	Log.Printf("Number of CI jobs outliving their backing git branch %s/%s: %d\n", jobTemplate.ProjectKey, jobTemplate.Slug, len(obsoleteCIJobs))
 
 	// Delete old jobs
 	for _, obsoleteJob := range obsoleteCIJobs {
@@ -198,12 +198,11 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		}
 	}
 
-	if c.shouldCreateReleaseJob(jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries) {
+	if c.shouldCreateReleaseJob(jobTemplate.ProjectKey, jobTemplate.Slug, jobSummaries) && len(jobTemplate.ReleaseJobTemplate) > 0 {
 		newJobName := c.canonicalReleaseJobName(jobTemplate.ProjectKey, jobTemplate.Slug)
 		newJobDescription := "This is a release job for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), "develop", jobTemplate)
 		if err := c.createJob(jobTemplate.ReleaseJobTemplate, newJobName, model); err != nil {
-			Log.Printf("Warning: while creating release job %s: %v\n", newJobName, err)
 			return err
 		}
 	}

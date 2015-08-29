@@ -108,7 +108,7 @@ func main() {
 
 		Log.Printf("Reconciling jobs for %s/%s\n", jobTemplate.ProjectKey, jobTemplate.Slug)
 		if err := skins.ReconcileJobs(jobSummaries, jobTemplate, jobAspect); err != nil {
-			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
+			Log.Printf("main: warning: while reconciling jobs for %s/%s: %v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
 		}
 	}
 	Log.Println("Stashkins has finished (__finish).")

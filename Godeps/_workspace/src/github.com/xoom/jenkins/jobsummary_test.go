@@ -299,11 +299,11 @@ func TestHttpMavenJobSummary(t *testing.T) {
 				t.Fatalf("Want Freestyle type but got: %s\n", summary.JobType)
 			}
 		}
-		if summary.GitURL != "ssh://example.com/proj/cool.git" {
-			t.Fatalf("Want ssh://example.com/proj/cool.git type but got: %s\n", summary.GitURL)
+		if summary.GitURL != "" {
+			t.Fatalf("Want empty Git URL but but got: %s\n", summary.GitURL)
 		}
-		if summary.Branch != "origin/develop" {
-			t.Fatalf("Want origin/develop type but got: %s\n", summary.Branch)
+		if summary.Branch != "" {
+			t.Fatalf("Want empty branch but got: %s\n", summary.Branch)
 		}
 
 		testServer.Close()
@@ -335,30 +335,6 @@ func TestHttpUnknownJobSummary(t *testing.T) {
 	}
 }
 
-func TestHttpJobSummaryNotSSHGitURL(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		url := *r.URL
-		if url.Path != "/job/thejob/config.xml" {
-			t.Fatalf("getJobSummary() URL path expected to end with config.xml: %s\n", url.Path)
-		}
-		if r.Header.Get("Accept") != "application/xml" {
-			t.Fatalf("getJobSummary() expected request Accept header to be application/xml but found %s\n", r.Header.Get("Accept"))
-		}
-		if r.Header.Get("Authorization") != "Basic dTpw" {
-			t.Fatalf("Want Basic dTpw but got %s\n", r.Header.Get("Authorization"))
-		}
-		fmt.Fprintln(w, notSSH)
-	}))
-	defer testServer.Close()
-
-	url, _ := url.Parse(testServer.URL)
-	jenkinsClient := Client{baseURL: url, userName: "u", password: "p"}
-	_, err := jenkinsClient.getJobSummary(JobDescriptor{Name: "thejob"})
-	if err == nil {
-		t.Fatalf("Expected error owing to Git URL not ssh://\n")
-	}
-}
-
 func TestJobSummariesFromFilesystem(t *testing.T) {
 	root, err := extractTestConfigs()
 	if err != nil {
@@ -384,15 +360,15 @@ func TestJobSummariesFromFilesystem(t *testing.T) {
 			if v.JobType != Maven {
 				t.Fatalf("Want Maven job type but got %d\n", v.JobType)
 			}
-			if v.GitURL != "ssh://example.com/proj/cool.git" {
-				t.Fatalf("Want git URL ssh://example.com/proj/cool.git but got %d\n", v.GitURL)
+			if v.GitURL != "" {
+				t.Fatalf("Want empty git repository but got %d\n", v.GitURL)
 			}
 		case "x":
 			if v.JobType != Freestyle {
 				t.Fatalf("Want Freestyle job type but got %d\n", v.JobType)
 			}
-			if v.GitURL != "ssh://example.com/proj/cool.git" {
-				t.Fatalf("Want git URL ssh://example.com/proj/cool.git but got %d\n", v.GitURL)
+			if v.GitURL != "" {
+				t.Fatalf("Want empty git repository but got %d\n", v.GitURL)
 			}
 		}
 	}
