@@ -274,7 +274,7 @@ func (c DefaultStashkins) calculateObsoleteCIJobs(specCIJobs []JobDescriptorNG, 
 			}
 		}
 		if jobNotInSpec && c.jobInNameSpace(existingJob.JobDescriptor.Name, projectKey, slug) {
-			obsoleteJobs = append(obsoleteJobs)
+			obsoleteJobs = append(obsoleteJobs, JobDescriptorNG{JobName: existingJob.JobDescriptor.Name})
 		}
 	}
 	return obsoleteJobs
