@@ -3,14 +3,31 @@ Stashkins
 
 Jenkins / Stash tooling
 
-Stashkins queries a Stash and Jenkins server for all the jobs built
-against a specified git repository URL and deletes jobs for which
-there is no backing Stash git branch and adds jobs to build branches
-it is not yet building.  Stashkins currently operates against
-Atlassian Stash only.  For Maven jobs, Stashkins will also create
-per-branch Maven repositories in Sonatype Nexus, which works in
-concert with the job template to determine to which Maven repository
-job artifacts should be published.
+Stashkins is a tool to perform Jenkins job reconciliation.  This
+means it reads the branches that exist on a given repository and
+creates using a template Jenkins jobs to build each branch.  It
+also deletes Jenkins jobs whose backing git branch has been removed.
+
+Stashkins considers itself the owner of the Jenkins job namespace.
+This means it will treat job names as indicators of not only whether
+a job should be created to build a branch on a repository, but also
+whether to delete a a job whose backing branch has been deleted.
+
+For example, if a repository _bar_ in a Stash project _foo_ has a
+branch _issue/1_, Stashkins will create a job named
+foo-bar-continuous-issue-1 if no job with that name exists.  Job
+names therefore encode project name, repository name, and branch
+built.
+
+When the backing branch _issue/1_ is deleted, Stashkins will observe
+this job still exists and delete it because the job name starts
+with the _job namespace_ _foo-bar-continous-_ without a backing
+branch to provide the issue-1 job name suffix.
+
+For Maven jobs, Stashkins will also create per-branch Maven
+repositories in Sonatype Nexus, which works in concert with the job
+template to determine to which Maven repository job artifacts should
+be published.
 
 Stashkins also supports Jenkins Freestyle projects.
 
