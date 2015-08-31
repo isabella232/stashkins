@@ -6,15 +6,15 @@ Jenkins / Stash tooling
 The Jenkins Job Namespace
 =========================
 
-Stashkins is a tool to perform Jenkins job reconciliation.  This
+Stashkins is a tool that performs Jenkins job reconciliation.  This
 means it reads the branches that exist on a given repository and
-creates using a template Jenkins jobs to build each branch.  It
-also deletes Jenkins jobs whose backing git branch has been removed.
+uses a template to create jobs to build each one.  It also deletes
+Jenkins jobs whose backing git branch has been removed.
 
 Stashkins considers itself the owner of the Jenkins job namespace.
 This means it will treat job names as indicators of not only whether
 a job should be created to build a branch on a repository, but also
-whether to delete a a job whose backing branch has been deleted.
+whether to delete a job whose backing branch has been deleted.
 
 For example, if a repository _bar_ in a Stash project _foo_ has a
 branch _issue/1_, Stashkins will create a job named
@@ -25,7 +25,7 @@ built.
 When the backing branch _issue/1_ is deleted, Stashkins will observe
 this job still exists and delete it because the job name starts
 with the _job namespace_ _foo-bar-continous-_ without a backing
-branch to provide the issue-1 job name suffix.
+branch to provide the suffix of the branch-part of the job name.
 
 For Maven jobs, Stashkins will also create per-branch Maven
 repositories in Sonatype Nexus, which works in concert with the job
