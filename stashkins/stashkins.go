@@ -183,7 +183,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 
 	// Create missing jobs
 	for _, missingJob := range missingCIJobs {
-		newJobName := c.branchOperations.canonicalCIJobName(jobTemplate.ProjectKey, jobTemplate.Slug, missingJob.Branch)
+		newJobName := c.canonicalCIJobName(jobTemplate.ProjectKey, jobTemplate.Slug, missingJob.Branch)
 		newJobDescription := "This is a continuous build for " + jobTemplate.ProjectKey + "-" + jobTemplate.Slug + ", branch " + missingJob.Branch.DisplayID
 
 		model := jobAspect.MakeModel(newJobName, newJobDescription, gitRepository.SshUrl(), missingJob.Branch.DisplayID, jobTemplate)
@@ -210,27 +210,11 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 	return nil
 }
 
-func (c DefaultStashkins) shouldCreateReleaseJob(projectKey, slug string, jobSummaries []jenkins.JobSummary) bool {
-	releaseJobName := c.canonicalReleaseJobName(projectKey, slug)
-	var foundIt bool = false
-	for _, v := range jobSummaries {
-		if releaseJobName == v.JobDescriptor.Name {
-			foundIt = true
-			break
-		}
-	}
-	return !foundIt
-}
-
-func (c DefaultStashkins) canonicalReleaseJobName(projectKey, slug string) string {
-	return fmt.Sprintf("%s-%s-release", projectKey, slug)
-}
-
 func (c DefaultStashkins) calculateSpecCIJobs(projectKey, slug string, branches map[string]stash.Branch) []JobDescriptorNG {
 	specCIJobNames := make([]JobDescriptorNG, 0)
 	for _, branch := range branches {
 		if c.branchOperations.isBranchManaged(branch.DisplayID) {
-			newJobName := c.branchOperations.canonicalCIJobName(projectKey, slug, branch)
+			newJobName := c.canonicalCIJobName(projectKey, slug, branch)
 			descriptor := JobDescriptorNG{JobName: newJobName, Branch: branch}
 			specCIJobNames = append(specCIJobNames, descriptor)
 		}
@@ -255,14 +239,6 @@ func (c DefaultStashkins) calculateMissingCIJobs(specCIJobs []JobDescriptorNG, j
 	return missingJobs
 }
 
-func (c DefaultStashkins) jobNameSpace(projectKey, slug string) string {
-	return fmt.Sprintf("%s-%s-continuous-", projectKey, slug)
-}
-
-func (c DefaultStashkins) jobInNameSpace(jobName, projectKey, slug string) bool {
-	return strings.HasPrefix(jobName, c.jobNameSpace(projectKey, slug))
-}
-
 func (c DefaultStashkins) calculateObsoleteCIJobs(specCIJobs []JobDescriptorNG, projectKey, slug string, jobSummaries []jenkins.JobSummary) []JobDescriptorNG {
 	obsoleteJobs := make([]JobDescriptorNG, 0)
 	for _, existingJob := range jobSummaries {
@@ -273,7 +249,7 @@ func (c DefaultStashkins) calculateObsoleteCIJobs(specCIJobs []JobDescriptorNG, 
 				break
 			}
 		}
-		if jobNotInSpec && c.jobInNameSpace(existingJob.JobDescriptor.Name, projectKey, slug) {
+		if jobNotInSpec && c.jobInCINameSpace(existingJob.JobDescriptor.Name, projectKey, slug) {
 			obsoleteJobs = append(obsoleteJobs, JobDescriptorNG{JobName: existingJob.JobDescriptor.Name})
 		}
 	}
@@ -306,6 +282,31 @@ func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel int
 	return nil
 }
 
-func (c DefaultStashkins) isTargetJob(jobSummary jenkins.JobSummary, jobRepositoryURL string) bool {
-	return jobSummary.GitURL == jobRepositoryURL
+func (c DefaultStashkins) shouldCreateReleaseJob(projectKey, slug string, jobSummaries []jenkins.JobSummary) bool {
+	releaseJobName := c.canonicalReleaseJobName(projectKey, slug)
+	var foundIt bool = false
+	for _, v := range jobSummaries {
+		if releaseJobName == v.JobDescriptor.Name {
+			foundIt = true
+			break
+		}
+	}
+	return !foundIt
+}
+
+func (c DefaultStashkins) canonicalReleaseJobName(projectKey, slug string) string {
+	return fmt.Sprintf("%s-%s-release", projectKey, slug)
+}
+
+func (c DefaultStashkins) canonicalCIJobName(projectKey, slug string, branch stash.Branch) string {
+	branchBaseName, branchSuffix := c.branchOperations.suffixer(branch.DisplayID)
+	return projectKey + "-" + slug + "-continuous-" + branchBaseName + branchSuffix
+}
+
+func (c DefaultStashkins) cIJobNameSpace(projectKey, slug string) string {
+	return fmt.Sprintf("%s-%s-continuous-", projectKey, slug)
+}
+
+func (c DefaultStashkins) jobInCINameSpace(jobName, projectKey, slug string) bool {
+	return strings.HasPrefix(jobName, c.cIJobNameSpace(projectKey, slug))
 }
