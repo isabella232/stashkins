@@ -3,6 +3,9 @@ Stashkins
 
 Jenkins / Stash tooling
 
+The Jenkins Job Namespace
+=========================
+
 Stashkins is a tool to perform Jenkins job reconciliation.  This
 means it reads the branches that exist on a given repository and
 creates using a template Jenkins jobs to build each branch.  It
