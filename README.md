@@ -80,9 +80,11 @@ Usage of ./stashkins-darwin-amd64:
 ```
 
 Job templates are retrieved from a dedicated git repository denoted
-by job-template-repository-url.  Stashkins will clone this repository
-and walk the directory tree looking for project-key/slug/template.xml
-files on which to base new jobs for project *project-key* and
+by _job-template-repository-url_.  Stashkins will clone this
+repository and walk the directory tree looking for
+project-key/slug/continous-template.xml and
+project-key/slug/release-template.xml files on which to base new
+CI and release jobs, respectively, for project *project-key* and
 repository *slug*.
 
 If _jenkins-job-directory_ is set, Stashkins will retrieve job
