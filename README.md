@@ -48,25 +48,48 @@ directory.
 Usage
 =====
 
-     $ ./stashkins-darwin-amd64 -h
-     Usage of ./stashkins-darwin-amd64:
-         -jenkins-base-url="http://jenkins.example.com:8080": Jenkins Base URL
-         -job-template-repository-branch="master": Templates are held a Stash repository.  This is the branch from which to fetch the job template.
-         -job-template-repository-url="": The Stash repository where job templates are stored..
-         -maven-repo-base-url="http://localhost:8081/nexus": Maven repository management Base URL
-         -maven-repo-password="": Password for Maven repository management user
-         -maven-repo-repository-groupID="": Repository groupID in which to group new per-branch repositories
-         -maven-repo-username="": User capable of doing automation of Maven repository management
-         -password="": Password for automation user
-         -stash-rest-base-url="http://stash.example.com:8080": Stash REST Base URL
-         -username="": User capable of doing automation tasks on Stash and Jenkins
-         -version=false: Print build info from which stashkins was built
+```
+laptop:stashkins> ./stashkins-darwin-amd64 -h
+Usage of ./stashkins-darwin-amd64:
+  -jenkins-base-url string
+    	Jenkins Base URL (default "http://jenkins.example.com:8080")
+  -jenkins-jobs-directory string
+    	Filesystem location of Jenkins jobs directory.  Used when acquiring job summaries from the Jenkins master filesystem.
+  -job-template-repository-branch string
+    	Templates are held a Stash repository.  This is the branch from which to fetch the job template. (default "master")
+  -job-template-repository-url string
+    	The Stash repository where job templates are stored..
+  -managed-branch-prefixes string
+    	Branch prefixes to manage. (default "feature/")
+  -maven-repo-base-url string
+    	Maven repository management Base URL (default "http://localhost:8081/nexus")
+  -maven-repo-password string
+    	Password for Maven repository management user
+  -maven-repo-repository-groupID string
+    	Repository groupID in which to group new per-branch repositories
+  -maven-repo-username string
+    	User capable of doing automation of Maven repository management
+  -password string
+    	Password for automation user
+  -stash-rest-base-url string
+    	Stash REST Base URL (default "http://stash.example.com:8080")
+  -username string
+    	User capable of doing automation tasks on Stash and Jenkins
+  -version
+    	Print build info from which stashkins was built
+```
 
 Job templates are retrieved from a dedicated git repository denoted
 by job-template-repository-url.  Stashkins will clone this repository
 and walk the directory tree looking for project-key/slug/template.xml
 files on which to base new jobs for project *project-key* and
 repository *slug*.
+
+If _jenkins-job-directory_ is set, Stashkins will retrieve job
+summaries from the filesystem on the Jenkins master.  If omitted,
+job summaries will be retrieved over HTTP from the Jenkins master
+URL.  Retrieving summaries from the filesystem can be tens of times
+faster than over HTTP, especially when the number of jobs is large.
 
 Template Parameters Available to Users
 ======================================
