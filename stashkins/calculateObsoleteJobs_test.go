@@ -19,10 +19,19 @@ func TestCalculateObsoleteJobs(t *testing.T) {
 			JobDescriptor: jenkins.JobDescriptor{Name: "proj-somelib-continuous-feature-issue-100"},
 		},
 		jenkins.JobSummary{
-			JobDescriptor: jenkins.JobDescriptor{Name: "proj-somelib-continuous-feature-issue-101"},
+			JobDescriptor: jenkins.JobDescriptor{Name: "proj-somelib-continuous-feature-issue-101"}, // <<< delete this
 		},
 		jenkins.JobSummary{
-			JobDescriptor: jenkins.JobDescriptor{Name: "proj-somelib-continuous-feature-issue-102"},
+			JobDescriptor: jenkins.JobDescriptor{Name: "proj-somelib-continuous-feature-issue-102"}, // <<< and this
+		},
+		jenkins.JobSummary{
+			JobDescriptor: jenkins.JobDescriptor{Name: "proj-otherlib-continuous-feature-issue-99"},
+		},
+		jenkins.JobSummary{
+			JobDescriptor: jenkins.JobDescriptor{Name: "nope-somelib-continuous-feature-issue-102"},
+		},
+		jenkins.JobSummary{
+			JobDescriptor: jenkins.JobDescriptor{Name: "touchMeAndDie"},
 		},
 	}
 
