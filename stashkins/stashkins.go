@@ -175,8 +175,13 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 			Log.Printf("Deleted obsolete job %+v\n", jobName)
 		}
 
-		branchName := c.branchOperations.recoverBranchFromCIJobName(jobName)
-		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), branchName, jobTemplate); err != nil {
+		recoveredBranchName, err := c.branchOperations.recoverBranchFromCIJobName(jobName)
+		if err != nil {
+			Log.Printf("Warning: %v.  Skipping post-delete-task.\n", err)
+			continue
+		}
+
+		if err := jobAspect.PostJobDeleteTasks(jobName, gitRepository.SshUrl(), recoveredBranchName, jobTemplate); err != nil {
 			Log.Printf("Error in post-job-delete-task, but willing to continue: %v\n", err)
 		}
 	}

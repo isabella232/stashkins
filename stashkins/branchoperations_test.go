@@ -78,8 +78,22 @@ func TestStripLeadingOrigin(t *testing.T) {
 
 func TestRecoverBranchNameFromCIJobName(t *testing.T) {
 	s := BranchOperations{}
-	branchName := s.recoverBranchFromCIJobName("proj-slug-continuous-feature-PRJ-44")
+
+	branchName, err := s.recoverBranchFromCIJobName("proj-slug-continuous-feature-PRJ-44")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v\n", err)
+	}
+
 	if branchName != "feature/PRJ-44" {
 		t.Fatalf("Want feature/PRJ-44 but got %s\n", branchName)
+	}
+}
+
+func TestFailedRecoverBranchNameFromCIJobName(t *testing.T) {
+	s := BranchOperations{}
+
+	_, err := s.recoverBranchFromCIJobName("blah")
+	if err == nil {
+		t.Fatal("Expected error for lacking -continuous- delimated in job name\n")
 	}
 }

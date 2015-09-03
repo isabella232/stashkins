@@ -2,6 +2,7 @@ package stashkins
 
 import (
 	"strings"
+	"fmt"
 )
 
 type BranchOperations struct {
@@ -72,8 +73,11 @@ func (c BranchOperations) stripLeadingOrigin(branch string) string {
 	return branch
 }
 
-func (c BranchOperations) recoverBranchFromCIJobName(jobName string) string {
+func (c BranchOperations) recoverBranchFromCIJobName(jobName string) (string, error) {
 	parts := strings.Split(jobName, "-continuous-")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("jobName %s split on -continuous- expected to have two parts.  Found %d\n", jobName, len(parts))
+	}
 	p := parts[1]
-	return strings.Replace(p, "-", "/", 1)
+	return strings.Replace(p, "-", "/", 1), nil
 }
