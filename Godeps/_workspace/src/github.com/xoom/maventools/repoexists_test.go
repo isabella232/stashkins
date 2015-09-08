@@ -1,12 +1,10 @@
-package nexus
+package maventools
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/xoom/maventools"
 )
 
 func TestRepoExists(t *testing.T) {
@@ -32,8 +30,8 @@ func TestRepoExists(t *testing.T) {
 	}))
 	defer server.Close()
 
-	var client maventools.Client
-	client = NewClient(server.URL, "user", "password")
+	var client NexusClient
+	client = NewNexusClient(server.URL, "user", "password")
 	exists, err := client.RepositoryExists("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
@@ -50,7 +48,7 @@ func TestRepoNotExists(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	exists, err := client.RepositoryExists("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
@@ -67,7 +65,7 @@ func TestRepoExistsError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	_, err := client.RepositoryExists("somerepo")
 	if err == nil {
 		t.Fatalf("Expecting error but got none\n")

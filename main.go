@@ -10,11 +10,13 @@ import (
 	"github.com/xoom/jenkins"
 
 	"github.com/xoom/stashkins/stashkins"
+	"strings"
 )
 
 var (
 	stashBaseURL             = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL           = flag.String("jenkins-base-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
+	jenkinsJobsDirectory     = flag.String("jenkins-jobs-directory", "", "Filesystem location of Jenkins jobs directory.  Used when acquiring job summaries from the Jenkins master filesystem.")
 	jobTemplateRepositoryURL = flag.String("job-template-repository-url", "", "The Stash repository where job templates are stored..")
 	jobTemplateBranch        = flag.String("job-template-repository-branch", "master", "Templates are held a Stash repository.  This is the branch from which to fetch the job template.")
 	userName                 = flag.String("username", "", "User capable of doing automation tasks on Stash and Jenkins")
@@ -50,28 +52,42 @@ func init() {
 }
 
 func main() {
-	log.Printf("%s\n", buildInfo)
+	Log.Printf("%s\n", buildInfo)
 	if *versionFlag {
 		os.Exit(0)
 	}
 
 	validateCommandLineArguments()
 
-	templateCloneDirectory, err := ioutil.TempDir("", "stashkins-templates-")
-	defer func() {
-		os.RemoveAll(templateCloneDirectory)
-	}()
-
 	branchOperations := stashkins.NewBranchOperations(*managedBranchPrefixes)
 
 	skins := stashkins.NewStashkins(stashParams, jenkinsParams, nexusParams, branchOperations)
 
-	jobSummaries, err := skins.JobSummaries()
-	if err != nil {
-		Log.Printf("main: Cannot get Jenkins job summaries: %#v\n", err)
-		return
+	var jobSummaries []jenkins.JobSummary
+
+	var err error
+	if *jenkinsJobsDirectory == "" {
+		jobSummaries, err = skins.JobSummariesOverHTTP()
+		if err != nil {
+			Log.Printf("main: Cannot get Jenkins job summaries over HTTP: %#v\n", err)
+			return
+		}
+	} else {
+		jobSummaries, err = skins.JobSummariesFromFilesystem(*jenkinsJobsDirectory)
+		if err != nil {
+			Log.Printf("main: Cannot get Jenkins job summaries from filesystem: %#v\n", err)
+			return
+		}
 	}
 	Log.Printf("Found %d Jenkins job summaries\n", len(jobSummaries))
+
+	templateCloneDirectory, err := ioutil.TempDir("", "stashkins-templates-")
+	if err != nil {
+		Log.Fatalln(err)
+	}
+	defer func() {
+		os.RemoveAll(templateCloneDirectory)
+	}()
 
 	jobTemplates, err := stashkins.Templates(*jobTemplateRepositoryURL, *jobTemplateBranch, templateCloneDirectory)
 	if err != nil {
@@ -92,26 +108,31 @@ func main() {
 
 		Log.Printf("Reconciling jobs for %s/%s\n", jobTemplate.ProjectKey, jobTemplate.Slug)
 		if err := skins.ReconcileJobs(jobSummaries, jobTemplate, jobAspect); err != nil {
-			Log.Printf("main: error reconciling jobs for %s/%s: %#v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
+			Log.Printf("main: warning: while reconciling jobs for %s/%s: %v\n", jobTemplate.ProjectKey, jobTemplate.Slug, err)
 		}
 	}
+	Log.Println("Stashkins has finished (__finish).")
 }
 
 func validateCommandLineArguments() {
 
 	if *userName == "" || *password == "" {
-		Log.Fatalf("username and password are required")
+		Log.Fatalln("username and password are required")
 	}
 
 	if *jobTemplateRepositoryURL == "" {
-		Log.Fatalf("template-repository-url is required")
+		Log.Fatalln("template-repository-url is required")
 	}
 
 	if *mavenRepositoryGroupID == "" {
-		Log.Fatalf("maven-repo-repository-groupID is required")
+		Log.Fatalln("maven-repo-repository-groupID is required")
 	}
 
 	if *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
-		Log.Fatalf("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required\n")
+		Log.Fatalln("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required")
+	}
+
+	if *jenkinsJobsDirectory != "" && !strings.HasPrefix(*jenkinsJobsDirectory, "/") {
+		Log.Fatalf("jenkins-jobs-directory must be specified with an absolute path: %s\n", *jenkinsJobsDirectory)
 	}
 }

@@ -2,9 +2,6 @@ package stashkins
 
 import (
 	"testing"
-
-	"github.com/xoom/jenkins"
-	"github.com/xoom/stash"
 )
 
 func TestNewBranchOperations(t *testing.T) {
@@ -48,65 +45,14 @@ func TestIsFeatureBranch(t *testing.T) {
 		if !s.isBranchManaged(prefix + "somebranch") {
 			t.Fatalf("want " + prefix + "somebranch managed == true but got false\n")
 		}
-
-		if !s.isBranchManaged("origin/" + prefix + "somebranch") {
-			t.Fatalf("want origin/" + prefix + "somebranch managed == true but got false\n")
-		}
 	}
 
 	if s.isFeatureBranch("origin/feature/*") {
 		t.Fatalf("want false\n")
 	}
-}
 
-func TestCreateLackingJob(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-	jobSummaries := []jenkins.JobSummary{jenkins.JobSummary{Branch: "origin/feature/1"}}
-	if !s.shouldCreateJob(jobSummaries, "feature/2") {
-		t.Fatalf("Want true\n")
-	}
-}
-
-func TestDoNotCreateJobAlreadyBeingBuilt(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-	jobSummaries := []jenkins.JobSummary{jenkins.JobSummary{Branch: "origin/feature/1"}}
-	if s.shouldCreateJob(jobSummaries, "feature/1") {
-		t.Fatalf("Want false\n")
-	}
-}
-
-func TestDoNotCreateJobForUnmanagedBranch(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-	jobSummaries := make([]jenkins.JobSummary, 0)
-	if s.shouldCreateJob(jobSummaries, "master") {
-		t.Fatalf("Want false\n")
-	}
-}
-
-func TestJobNotObsolete(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-	jobSummary := jenkins.JobSummary{Branch: "origin/feature/1"}
-	stashBranches := map[string]stash.Branch{"feature/1": stash.Branch{}}
-	if s.shouldDeleteJob(jobSummary, stashBranches) {
-		t.Fatalf("Want false\n")
-	}
-}
-
-func TestJobNotObsoleteBranchUnmanaged(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-	jobSummary := jenkins.JobSummary{Branch: "origin/master"}
-	stashBranches := map[string]stash.Branch{"feature/1": stash.Branch{}}
-	if s.shouldDeleteJob(jobSummary, stashBranches) {
-		t.Fatalf("Want false\n")
-	}
-}
-
-func TestJobObsolete(t *testing.T) {
-	s := BranchOperations{ManagedPrefixes: []string{"feature/", "hotfix/"}}
-	jobSummary := jenkins.JobSummary{Branch: "origin/feature/1"}
-	stashBranches := map[string]stash.Branch{"feature/2": stash.Branch{}}
-	if !s.shouldDeleteJob(jobSummary, stashBranches) {
-		t.Fatalf("Want false\n")
+	if s.isFeatureBranch("origin/feature/z") {
+		t.Fatalf("want false\n")
 	}
 }
 
@@ -128,5 +74,26 @@ func TestStripLeadingOrigin(t *testing.T) {
 	if v != "develop" {
 		t.Fatalf("Want develop but got %s\n", v)
 	}
+}
 
+func TestRecoverBranchNameFromCIJobName(t *testing.T) {
+	s := BranchOperations{}
+
+	branchName, err := s.recoverBranchFromCIJobName("proj-slug-continuous-feature-PRJ-44")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v\n", err)
+	}
+
+	if branchName != "feature/PRJ-44" {
+		t.Fatalf("Want feature/PRJ-44 but got %s\n", branchName)
+	}
+}
+
+func TestFailedRecoverBranchNameFromCIJobName(t *testing.T) {
+	s := BranchOperations{}
+
+	_, err := s.recoverBranchFromCIJobName("blah")
+	if err == nil {
+		t.Fatal("Expected error for lacking -continuous- delimated in job name\n")
+	}
 }

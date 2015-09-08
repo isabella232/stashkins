@@ -1,16 +1,17 @@
 package stashkins_test
 
 import (
-	"github.com/xoom/maventools/nexus"
-	"github.com/xoom/stashkins/stashkins"
 	"reflect"
 	"testing"
+
+	"github.com/xoom/maventools"
+	"github.com/xoom/stashkins/stashkins"
 )
 
 func TestMakeMavenModel(t *testing.T) {
 	maven := stashkins.NewMavenAspect(
 		stashkins.MavenRepositoryParams{WebClientParams: stashkins.WebClientParams{URL: "http://maven.example.com/nexus"}, FeatureBranchRepositoryGroupID: "repoId"},
-		nexus.Client{},
+		maventools.NexusClient{},
 		stashkins.BranchOperations{},
 	)
 

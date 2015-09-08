@@ -1,4 +1,4 @@
-package nexus
+package maventools
 
 import (
 	"net/http"
@@ -30,7 +30,7 @@ func TestDeleteRepo(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	i, err := client.DeleteRepository("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
@@ -46,7 +46,7 @@ func TestDeleteRepoNotFound(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	i, err := client.DeleteRepository("somerepo")
 	if err != nil {
 		t.Fatalf("Expecting no error but got one: %v\n", err)
@@ -62,7 +62,7 @@ func TestDeleteRepoUnexpectedResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user", "password")
+	client := NewNexusClient(server.URL, "user", "password")
 	i, err := client.DeleteRepository("somerepo")
 	if err == nil {
 		t.Fatalf("Expecting an error but got none\n")

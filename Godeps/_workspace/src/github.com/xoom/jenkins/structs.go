@@ -18,6 +18,7 @@ type (
 		GetJobs() (map[string]JobDescriptor, error)
 		GetJobConfig(jobName string) (JobConfig, error)
 		GetJobSummaries() ([]JobSummary, error)
+		GetJobSummariesFromFilesystem(root string) ([]JobSummary, error)
 		CreateJob(jobName, jobConfigXML string) error
 		DeleteJob(jobName string) error
 	}
@@ -31,7 +32,6 @@ type (
 
 	JobDescriptor struct {
 		Name string `json:"name"`
-		URL  string `json:"url"`
 	}
 
 	Jobs struct {
@@ -58,8 +58,8 @@ type (
 	JobSummary struct {
 		JobDescriptor JobDescriptor
 		JobType       JobType
-		GitURL        string
-		Branch        string
+		GitURL        string  // the use of this field is deprecated
+		Branch        string  // the use of this field is deprecated
 	}
 
 	Scm struct {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 )
 
@@ -259,7 +260,7 @@ echo &quot;Hello, world</command>
 </maven2-moduleset>
 `
 
-func TestMavenJobSummary(t *testing.T) {
+func TestHttpMavenJobSummary(t *testing.T) {
 	jobMap := make(map[string]string)
 	jobMap["maven"] = jobConfig1
 	jobMap["freestyle"] = freestyle1
@@ -298,11 +299,11 @@ func TestMavenJobSummary(t *testing.T) {
 				t.Fatalf("Want Freestyle type but got: %s\n", summary.JobType)
 			}
 		}
-		if summary.GitURL != "ssh://example.com/proj/cool.git" {
-			t.Fatalf("Want ssh://example.com/proj/cool.git type but got: %s\n", summary.GitURL)
+		if summary.GitURL != "" {
+			t.Fatalf("Want empty Git URL but but got: %s\n", summary.GitURL)
 		}
-		if summary.Branch != "origin/develop" {
-			t.Fatalf("Want origin/develop type but got: %s\n", summary.Branch)
+		if summary.Branch != "" {
+			t.Fatalf("Want empty branch but got: %s\n", summary.Branch)
 		}
 
 		testServer.Close()
@@ -310,7 +311,7 @@ func TestMavenJobSummary(t *testing.T) {
 
 }
 
-func TestUnknownJobSummary(t *testing.T) {
+func TestHttpUnknownJobSummary(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		url := *r.URL
 		if url.Path != "/job/thejob/config.xml" {
@@ -334,26 +335,58 @@ func TestUnknownJobSummary(t *testing.T) {
 	}
 }
 
-func TestJobSummaryNotSSHGitURL(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		url := *r.URL
-		if url.Path != "/job/thejob/config.xml" {
-			t.Fatalf("getJobSummary() URL path expected to end with config.xml: %s\n", url.Path)
-		}
-		if r.Header.Get("Accept") != "application/xml" {
-			t.Fatalf("getJobSummary() expected request Accept header to be application/xml but found %s\n", r.Header.Get("Accept"))
-		}
-		if r.Header.Get("Authorization") != "Basic dTpw" {
-			t.Fatalf("Want Basic dTpw but got %s\n", r.Header.Get("Authorization"))
-		}
-		fmt.Fprintln(w, notSSH)
-	}))
-	defer testServer.Close()
+func TestJobSummariesFromFilesystem(t *testing.T) {
+	root, err := extractTestConfigs()
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
+	defer func() {
+		os.RemoveAll(root)
+	}()
 
-	url, _ := url.Parse(testServer.URL)
-	jenkinsClient := Client{baseURL: url, userName: "u", password: "p"}
-	_, err := jenkinsClient.getJobSummary(JobDescriptor{Name: "thejob"})
+	jenkinsClient := Client{baseURL: nil, userName: "u", password: "p"}
+
+	summaries, err := jenkinsClient.GetJobSummariesFromFilesystem(root)
+	if len(summaries) != 2 {
+		t.Fatalf("Want 2 but got %d\n", len(summaries))
+	}
+
+	for _, v := range summaries {
+		if !(v.JobDescriptor.Name == "a" || v.JobDescriptor.Name == "x") {
+			t.Fatalf("Want job name a or x but got %s\n", v.JobDescriptor.Name)
+		}
+		switch v.JobDescriptor.Name {
+		case "a":
+			if v.JobType != Maven {
+				t.Fatalf("Want Maven job type but got %d\n", v.JobType)
+			}
+			if v.GitURL != "" {
+				t.Fatalf("Want empty git repository but got %d\n", v.GitURL)
+			}
+		case "x":
+			if v.JobType != Freestyle {
+				t.Fatalf("Want Freestyle job type but got %d\n", v.JobType)
+			}
+			if v.GitURL != "" {
+				t.Fatalf("Want empty git repository but got %d\n", v.GitURL)
+			}
+		}
+	}
+}
+
+func TestJobSummariesFromFilesystemNoSuchRoot(t *testing.T) {
+	root, err := extractTestConfigs()
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
+	defer func() {
+		os.RemoveAll(root)
+	}()
+
+	jenkinsClient := Client{baseURL: nil, userName: "u", password: "p"}
+
+	_, err = jenkinsClient.GetJobSummariesFromFilesystem(root + "/nosuchdirectory")
 	if err == nil {
-		t.Fatalf("Expected error owing to Git URL not ssh://\n")
+		t.Fatalf("Want an error when getting summaries from a non-existent directory\n")
 	}
 }

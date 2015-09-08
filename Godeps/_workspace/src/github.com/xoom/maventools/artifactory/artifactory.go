@@ -1,4 +1,0 @@
-package artifactory
-
-func init() {
-}
