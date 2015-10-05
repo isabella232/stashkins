@@ -64,7 +64,7 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 				Log.Printf("Maven postCreator created Maven repositoryID %v\n", repositoryID)
 				const sleepy time.Duration = 3
 				time.Sleep(sleepy * time.Second)
-				Log.Printf("Slept for %v seconds before adding repository to per-branch group\n", sleepy)
+				Log.Printf("Slept for %d seconds before adding repository to per-branch group\n", sleepy)
 			}
 		}
 	} else {
