@@ -7,7 +7,11 @@ LD_FLAGS := '-X "main.buildInfo=Version: $(VERSION), commitID: $(COMMIT_ID), bui
 
 all: clean binaries 
 
-test:
+lint:
+	go fmt
+	go vet
+
+test: lint
 	godep go test ./...
 
 binaries: tools test 

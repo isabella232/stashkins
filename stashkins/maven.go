@@ -3,9 +3,11 @@ package stashkins
 import (
 	"fmt"
 	"strings"
+	"time"
+
+	"unicode"
 
 	"github.com/xoom/maventools"
-	"unicode"
 )
 
 type MavenAspect struct {
@@ -60,6 +62,9 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 		} else {
 			if rc == 201 {
 				Log.Printf("Maven postCreator created Maven repositoryID %v\n", repositoryID)
+				const sleepy time.Duration = 3
+				time.Sleep(sleepy * time.Second)
+				Log.Printf("Slept for %d seconds before adding repository to per-branch group\n", sleepy)
 			}
 		}
 	} else {
