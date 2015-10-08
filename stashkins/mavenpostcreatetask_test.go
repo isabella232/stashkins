@@ -62,7 +62,10 @@ func TestMavenPostCreateTasks(t *testing.T) {
 	}
 	nexusClient := maventools.NewNexusClient(testServer.URL, "u", "p")
 	aspect := stashkins.NewMavenAspect(params, nexusClient, stashkins.BranchOperations{ManagedPrefixes: []string{"feature/"}})
-	aspect.PostJobCreateTasks("jobName", "jobDescription", "ssh://git@example.com/dot.git", "feature/1", stashkins.JobTemplate{ProjectKey: "PROJ", Slug: "slug"})
+	err := aspect.PostJobCreateTasks("jobName", "jobDescription", "ssh://git@example.com/dot.git", "feature/1", stashkins.JobTemplate{ProjectKey: "PROJ", Slug: "slug"})
+	if err != nil {
+		t.Fatalf("Unexpected error: %n\n", err)
+	}
 }
 
 func TestMavenPostCreateTasksCreatedRepoUnsettled(t *testing.T) {
