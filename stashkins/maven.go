@@ -7,6 +7,7 @@ import (
 
 	"unicode"
 
+	"github.com/ae6rt/retry"
 	"github.com/xoom/maventools"
 )
 
@@ -62,9 +63,6 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 		} else {
 			if rc == 201 {
 				Log.Printf("Maven postCreator created Maven repositoryID %v\n", repositoryID)
-				const sleepy time.Duration = 3
-				time.Sleep(sleepy * time.Second)
-				Log.Printf("Slept for %d seconds before adding repository to per-branch group\n", sleepy)
 			}
 		}
 	} else {
@@ -74,6 +72,11 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 		} else {
 			Log.Printf("Maven postCreator: Maven repositoryID %v exists.  Skipping.\n", repositoryID)
 		}
+	}
+
+	if err := maven.waitForRepositoryToSettle(repositoryID); err != nil {
+		Log.Printf("Maven postCreator: per-branch repository %s does not exist or error trying to determine as much.\n", err)
+		return err
 	}
 
 	repositoryGroupID := maventools.GroupID(maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
@@ -86,6 +89,31 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 		}
 	}
 	return nil
+}
+
+func (maven MavenAspect) waitForRepositoryToSettle(repositoryID maventools.RepositoryID) error {
+	retry := retry.New(16*time.Second, 5, func(attempts uint) {
+		Log.Printf("Wait for repository-exists with-backoff try %d\n", attempts+1)
+		if attempts == 0 {
+			return
+		}
+		time.Sleep((1 << attempts) * time.Second)
+	})
+
+	// Sonatype says Nexus will perform asynchronous tasks on creating the repository after Nexus returns 201 Created above.  As a result, the repository
+	// may not actually be eligible for addition to the group when the call to create returns.  So poll Nexus for a short time, waiting for the repository
+	// to be fully formed, which Sonatype says is indicated by an HTTP 200 OK in response to an HTTP GET on the repository ID.
+	work := func() error {
+		exists, err := maven.client.RepositoryExists(repositoryID)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("Repository does not exist")
+		}
+		return nil
+	}
+	return retry.Try(work)
 }
 
 func (maven MavenAspect) repositoryURL(gitProjectKey, gitRepositorySlug, gitBranch string) string {

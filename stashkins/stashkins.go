@@ -199,7 +199,7 @@ func (c DefaultStashkins) ReconcileJobs(jobSummaries []jenkins.JobSummary, jobTe
 		}
 
 		if err := jobAspect.PostJobCreateTasks(newJobName, newJobDescription, gitRepository.SshUrl(), missingJob.Branch.DisplayID, jobTemplate); err != nil {
-			Log.Printf("Error in post-job-create-task, but willing to continue: %v\n", err)
+			Log.Printf("Error in post-job-create-task: %v\n", err)
 		}
 	}
 
