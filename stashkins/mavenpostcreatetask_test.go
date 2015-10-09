@@ -108,7 +108,7 @@ func TestMavenPostCreateTasksCreatedRepoUnsettled(t *testing.T) {
 			if r.Method != "HEAD" {
 				t.Fatalf("Want HEAD for checking if repo exists but got %s\n", r.Method)
 			}
-			w.WriteHeader(404)
+			w.WriteHeader(404)  // this should cause the post-creator to error out waiting forever for the repo-create to settle with 200 OK
 			return
 		case "/service/local/repositories":
 			if r.Method != "POST" {
