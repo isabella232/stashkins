@@ -50,42 +50,42 @@ func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branch st
 }
 
 func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
+	const agent = "Maven postCreator"
+
 	if !maven.branchOperations.isFeatureBranch(branch) {
-		Log.Printf("Maven postCreator skipping tasks for non-feature branch %s\n", branch)
+		Log.Printf("%s: skipping tasks for non-feature branch %s\n", agent, branch)
 		return nil
 	}
 
 	repositoryID := maventools.RepositoryID(maven.repositoryID(templateRecord.ProjectKey, templateRecord.Slug, branch))
 	if present, err := maven.client.RepositoryExists(repositoryID); err == nil && !present {
-		if rc, err := maven.client.CreateSnapshotRepository(repositoryID); err != nil {
-			Log.Printf("Maven postcreator failed to create Maven repository %v: %+v\n", repositoryID, err)
+		if _, err := maven.client.CreateSnapshotRepository(repositoryID); err != nil {
+			Log.Printf("%s: failed to create Maven repository %v: %+v\n", agent, repositoryID, err)
 			return err
 		} else {
-			if rc == 201 {
-				Log.Printf("Maven postCreator created Maven repositoryID %v\n", repositoryID)
-			}
+			Log.Printf("%s: created Maven repositoryID %v\n", agent, repositoryID)
+			// falls through to add the repository
 		}
+	} else if err != nil {
+		Log.Printf("%s: error checking if Maven repositoryID %v exists: %v\n", agent, repositoryID, err)
+		return err
 	} else {
-		if err != nil {
-			Log.Printf("Maven postCreator: error checking if Maven repositoryID %v exists: %v\n", repositoryID, err)
-			return err
-		} else {
-			Log.Printf("Maven postCreator: Maven repositoryID %v exists.  Skipping.\n", repositoryID)
-		}
+		Log.Printf("%s: Maven repositoryID %v exists.  Skipping.\n", agent, repositoryID)
+		// we historically allow this to fall through and re-add the repository
 	}
 
 	if err := maven.waitForRepositoryToSettle(repositoryID); err != nil {
-		Log.Printf("Maven postCreator: per-branch repository %s does not exist or error trying to determine as much.\n", err)
+		Log.Printf("%s: per-branch repository %s does not exist or error trying to determine as much.\n", agent, err)
 		return err
 	}
 
 	repositoryGroupID := maventools.GroupID(maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
 	if rc, err := maven.client.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
-		Log.Printf("Maven postCreator: failed to add Maven repository %s to repository group %v: %+v\n", repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID, err)
+		Log.Printf("%s: failed to add Maven repository %s to repository group %v: %+v\n", agent, repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID, err)
 		return err
 	} else {
 		if rc == 200 {
-			Log.Printf("Maven repositoryID %v added to repository groupID %s\n", repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
+			Log.Printf("%s: repositoryID %v added to repository groupID %s\n", agent, repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
 		}
 	}
 	return nil
@@ -93,9 +93,11 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 
 func (maven MavenAspect) waitForRepositoryToSettle(repositoryID maventools.RepositoryID) error {
 	retry := retry.New(16*time.Second, 5, func(attempts uint) {
-		Log.Printf("Wait for repository-exists with-backoff try %d\n", attempts+1)
 		if attempts == 0 {
 			return
+		}
+		if attempts > 2 {
+			Log.Printf("Wait for repository-exists with-backoff try %d\n", attempts+1)
 		}
 		time.Sleep((1 << attempts) * time.Second)
 	})
