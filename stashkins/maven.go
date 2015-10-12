@@ -12,6 +12,7 @@ import (
 )
 
 const postCreatorAgent = "Maven postCreator"
+const postDeleterAgent = "Maven postDeleter"
 
 type MavenAspect struct {
 	mavenRepositoryParams MavenRepositoryParams
@@ -37,16 +38,16 @@ func (maven MavenAspect) MakeModel(newJobName, newJobDescription, gitRepositoryU
 
 func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
 	if !maven.branchOperations.isFeatureBranch(branch) {
-		Log.Printf("Maven postDeleter skipping tasks for non-feature branch %s:\n", branch)
+		Log.Printf("%s:  skipping tasks for non-feature branch %s:\n", postDeleterAgent, branch)
 		return nil
 	}
 
 	repositoryID := maventools.RepositoryID(maven.repositoryID(templateRecord.ProjectKey, templateRecord.Slug, branch))
 	if _, err := maven.client.DeleteRepository(repositoryID); err != nil {
-		Log.Printf("Maven postDeleter failed to delete Maven repository %v: %+v\n", repositoryID, err)
+		Log.Printf("%s: failed to delete Maven repository %v: %+v\n", postDeleterAgent, repositoryID, err)
 		return err
 	} else {
-		Log.Printf("Maven postDeleter deleted Maven repository %v\n", repositoryID)
+		Log.Printf("%s: deleted Maven repository %v\n", postDeleterAgent, repositoryID)
 	}
 	return nil
 }
