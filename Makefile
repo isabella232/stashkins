@@ -1,5 +1,5 @@
 NAME := stashkins
-VERSION := 3.1
+VERSION := 3.2
 DESCRIPTION := 'Stashkins:  Jenkins job reconcilation'
 DOCUMENTATION := 'https://github.com/xoom/stashkins'
 

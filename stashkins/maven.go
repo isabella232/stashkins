@@ -7,8 +7,12 @@ import (
 
 	"unicode"
 
+	"github.com/ae6rt/retry"
 	"github.com/xoom/maventools"
 )
+
+const postCreatorAgent = "Maven postCreator"
+const postDeleterAgent = "Maven postDeleter"
 
 type MavenAspect struct {
 	mavenRepositoryParams MavenRepositoryParams
@@ -34,58 +38,86 @@ func (maven MavenAspect) MakeModel(newJobName, newJobDescription, gitRepositoryU
 
 func (maven MavenAspect) PostJobDeleteTasks(jobName, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
 	if !maven.branchOperations.isFeatureBranch(branch) {
-		Log.Printf("Maven postDeleter skipping tasks for non-feature branch %s:\n", branch)
+		Log.Printf("%s:  skipping tasks for non-feature branch %s:\n", postDeleterAgent, branch)
 		return nil
 	}
 
 	repositoryID := maventools.RepositoryID(maven.repositoryID(templateRecord.ProjectKey, templateRecord.Slug, branch))
 	if _, err := maven.client.DeleteRepository(repositoryID); err != nil {
-		Log.Printf("Maven postDeleter failed to delete Maven repository %v: %+v\n", repositoryID, err)
+		Log.Printf("%s: failed to delete Maven repository %v: %+v\n", postDeleterAgent, repositoryID, err)
 		return err
 	} else {
-		Log.Printf("Maven postDeleter deleted Maven repository %v\n", repositoryID)
+		Log.Printf("%s: deleted Maven repository %v\n", postDeleterAgent, repositoryID)
 	}
 	return nil
 }
 
 func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRepositoryURL, branch string, templateRecord JobTemplate) error {
+
 	if !maven.branchOperations.isFeatureBranch(branch) {
-		Log.Printf("Maven postCreator skipping tasks for non-feature branch %s\n", branch)
+		Log.Printf("%s: skipping tasks for non-feature branch %s\n", postCreatorAgent, branch)
 		return nil
 	}
 
 	repositoryID := maventools.RepositoryID(maven.repositoryID(templateRecord.ProjectKey, templateRecord.Slug, branch))
 	if present, err := maven.client.RepositoryExists(repositoryID); err == nil && !present {
-		if rc, err := maven.client.CreateSnapshotRepository(repositoryID); err != nil {
-			Log.Printf("Maven postcreator failed to create Maven repository %v: %+v\n", repositoryID, err)
+		if _, err := maven.client.CreateSnapshotRepository(repositoryID); err != nil {
+			Log.Printf("%s: failed to create Maven repository %v: %+v\n", postCreatorAgent, repositoryID, err)
 			return err
 		} else {
-			if rc == 201 {
-				Log.Printf("Maven postCreator created Maven repositoryID %v\n", repositoryID)
-				const sleepy time.Duration = 3
-				time.Sleep(sleepy * time.Second)
-				Log.Printf("Slept for %d seconds before adding repository to per-branch group\n", sleepy)
-			}
+			Log.Printf("%s: created Maven repositoryID %v\n", postCreatorAgent, repositoryID)
+			// falls through to add the repository
 		}
+	} else if err != nil {
+		Log.Printf("%s: error checking if Maven repositoryID %v exists: %v\n", postCreatorAgent, repositoryID, err)
+		return err
 	} else {
-		if err != nil {
-			Log.Printf("Maven postCreator: error checking if Maven repositoryID %v exists: %v\n", repositoryID, err)
-			return err
-		} else {
-			Log.Printf("Maven postCreator: Maven repositoryID %v exists.  Skipping.\n", repositoryID)
-		}
+		Log.Printf("%s: Maven repositoryID %v exists.  Skipping.\n", postCreatorAgent, repositoryID)
+		// we historically allow this to fall through and re-add the repository
+	}
+
+	if err := maven.waitForRepositoryToSettle(repositoryID); err != nil {
+		Log.Printf("%s: per-branch repository %s does not exist or error trying to determine as much.\n", postCreatorAgent, err)
+		return err
 	}
 
 	repositoryGroupID := maventools.GroupID(maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
 	if rc, err := maven.client.AddRepositoryToGroup(repositoryID, repositoryGroupID); err != nil {
-		Log.Printf("Maven postCreator: failed to add Maven repository %s to repository group %v: %+v\n", repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID, err)
+		Log.Printf("%s: failed to add Maven repository %s to repository group %v: %+v\n", postCreatorAgent, repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID, err)
 		return err
 	} else {
 		if rc == 200 {
-			Log.Printf("Maven repositoryID %v added to repository groupID %s\n", repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
+			Log.Printf("%s: repositoryID %v added to repository groupID %s\n", postCreatorAgent, repositoryID, maven.mavenRepositoryParams.FeatureBranchRepositoryGroupID)
 		}
 	}
 	return nil
+}
+
+func (maven MavenAspect) waitForRepositoryToSettle(repositoryID maventools.RepositoryID) error {
+	retry := retry.New(16*time.Second, 5, func(attempts uint) {
+		if attempts == 0 {
+			return
+		}
+		if attempts > 2 {
+			Log.Printf("%s: wait for repository-exists with-backoff try %d\n", postCreatorAgent, attempts+1)
+		}
+		time.Sleep((1 << attempts) * time.Second)
+	})
+
+	// Sonatype says Nexus will perform asynchronous tasks on creating the repository after Nexus returns 201 Created above.  As a result, the repository
+	// may not actually be eligible for addition to the group when the call to create returns.  So poll Nexus for a short time, waiting for the repository
+	// to be fully formed, which Sonatype says is indicated by an HTTP 200 OK in response to an HTTP GET on the repository ID.
+	work := func() error {
+		exists, err := maven.client.RepositoryExists(repositoryID)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("Repository does not exist")
+		}
+		return nil
+	}
+	return retry.Try(work)
 }
 
 func (maven MavenAspect) repositoryURL(gitProjectKey, gitRepositorySlug, gitBranch string) string {

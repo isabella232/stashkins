@@ -1,6 +1,7 @@
 package maventools
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,8 +10,8 @@ import (
 
 func TestRepoExists(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			t.Fatalf("Wanted GET but got %s\n", r.Method)
+		if r.Method != "HEAD" {
+			t.Fatalf("Wanted HEAD but got %s\n", r.Method)
 		}
 		if !strings.HasSuffix(r.URL.Path, "/service/local/repositories/somerepo") {
 			t.Fatalf("Wanted URL suffix /service/local/repositories/somerepo but got: %s\n", r.URL.Path)
@@ -69,5 +70,7 @@ func TestRepoExistsError(t *testing.T) {
 	_, err := client.RepositoryExists("somerepo")
 	if err == nil {
 		t.Fatalf("Expecting error but got none\n")
+	} else {
+		fmt.Println(err)
 	}
 }

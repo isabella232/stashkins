@@ -12,7 +12,7 @@ lint:
 	go vet
 
 test: lint
-	godep go test ./...
+	godep go test -v ./...
 
 binaries: tools test 
 	GOOS=darwin GOARCH=$(ARCH) godep go build -ldflags $(LD_FLAGS) -o $(NAME)-darwin-$(ARCH)

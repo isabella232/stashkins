@@ -1,8 +1,8 @@
 package stashkins
 
 import (
-	"strings"
 	"fmt"
+	"strings"
 )
 
 type BranchOperations struct {

@@ -73,10 +73,10 @@ func NewNexusClient(baseURL, username, password string) NexusClient {
 // RepositoryExists checks whether a given repository specified by repositoryID exists.
 func (client NexusClient) RepositoryExists(repositoryID RepositoryID) (bool, error) {
 	retry := retry.New(3*time.Second, 3, retry.DefaultBackoffFunc)
-	var exists bool
 
+	var responseCode int
 	work := func() error {
-		req, err := http.NewRequest("GET", client.BaseURL+"/service/local/repositories/"+string(repositoryID), nil)
+		req, err := http.NewRequest("HEAD", client.BaseURL+"/service/local/repositories/"+string(repositoryID), nil)
 		if err != nil {
 			return err
 		}
@@ -87,20 +87,15 @@ func (client NexusClient) RepositoryExists(repositoryID RepositoryID) (bool, err
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
+		resp.Body.Close()
 
-		if _, err := ioutil.ReadAll(resp.Body); err != nil {
-			return err
-		}
-
-		exists = resp.StatusCode == 200
-		if resp.StatusCode != 200 && resp.StatusCode != 404 {
-			return fmt.Errorf("Client.RepositoryExists(): unexpected response status: %d\n", resp.StatusCode)
+		responseCode = resp.StatusCode
+		if !(responseCode == http.StatusOK || responseCode == http.StatusNotFound) {
+			return fmt.Errorf("HTTP HEAD status code for whether repository ID exists returns neither 200 or 404: %d\n", responseCode)
 		}
 		return nil
 	}
-
-	return exists, retry.Try(work)
+	return responseCode == http.StatusOK, retry.Try(work)
 }
 
 // CreateSnapshotRepository creates a new hosted Maven2 SNAPSHOT repository with the given repositoryID.  The repository name

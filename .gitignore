@@ -4,3 +4,4 @@ stashkins-windows-amd64.exe
 *.deb
 *.rpm
 packaging/
+work/
