@@ -147,10 +147,10 @@ func TestBuildTemplates(t *testing.T) {
 			t.Fatalf("Want microservice or android but got %s\n", template.Slug)
 		}
 		if template.Slug == "microservice" && template.JobType != jenkins.Maven {
-			t.Fatalf("Want maven type for microservice but got %s\n", template.JobType)
+			t.Fatalf("Want maven type for microservice but got %v\n", template.JobType)
 		}
 		if template.Slug == "android" && template.JobType != jenkins.Freestyle {
-			t.Fatalf("Want freestyle type for android but got %s\n", template.JobType)
+			t.Fatalf("Want freestyle type for android but got %v\n", template.JobType)
 		}
 
 		var v Result

@@ -8,8 +8,8 @@ LD_FLAGS := '-X "main.buildInfo=Version: $(VERSION), commitID: $(COMMIT_ID), bui
 all: clean binaries 
 
 lint:
-	go fmt
-	go vet
+	go fmt ./...
+	go vet ./...
 
 test: lint
 	godep go test -v ./...

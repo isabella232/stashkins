@@ -99,7 +99,7 @@ func buildTemplates(files []string, f func(projectKey, slug string, data []byte,
 			continue
 		} else {
 			if jobType == jenkins.Unknown {
-				Log.Printf("stashkins.GetTemplates Skipping template repository record (unknown type)  %d: %v\n", file, jobType)
+				Log.Printf("stashkins.GetTemplates Skipping template repository record (unknown type)  %s: %v\n", file, jobType)
 				continue
 			}
 		}

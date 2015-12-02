@@ -8,10 +8,11 @@ import (
 	"os"
 	"text/template"
 
+	"strings"
+
 	"github.com/xoom/jenkins"
 	"github.com/xoom/maventools"
 	"github.com/xoom/stash"
-	"strings"
 )
 
 type (
@@ -267,11 +268,14 @@ func (c DefaultStashkins) createJob(data []byte, newJobName string, jobModel int
 	}
 
 	jobTemplate, err := template.New("jobconfig").Parse(string(data))
+	if err != nil {
+		return err
+	}
+
 	hydratedTemplate := bytes.NewBufferString("")
 	err = jobTemplate.Execute(hydratedTemplate, jobModel)
 	if err != nil {
 		Log.Printf("stashkins.createJob cannot hydrate job template %s: %v\n", string(data), err)
-		// If the template is bad, just return vs. continue because it won't work the next time through, either.
 		return err
 	}
 

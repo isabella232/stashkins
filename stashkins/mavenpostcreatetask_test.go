@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"fmt"
+
 	"github.com/xoom/maventools"
 	"github.com/xoom/stashkins/stashkins"
 )
@@ -64,7 +65,7 @@ func TestMavenPostCreateTasks(t *testing.T) {
 	aspect := stashkins.NewMavenAspect(params, nexusClient, stashkins.BranchOperations{ManagedPrefixes: []string{"feature/"}})
 	err := aspect.PostJobCreateTasks("jobName", "jobDescription", "ssh://git@example.com/dot.git", "feature/1", stashkins.JobTemplate{ProjectKey: "PROJ", Slug: "slug"})
 	if err != nil {
-		t.Fatalf("Unexpected error: %n\n", err)
+		t.Fatalf("Unexpected error: %v\n", err)
 	}
 }
 
@@ -108,7 +109,7 @@ func TestMavenPostCreateTasksCreatedRepoUnsettled(t *testing.T) {
 			if r.Method != "HEAD" {
 				t.Fatalf("Want HEAD for checking if repo exists but got %s\n", r.Method)
 			}
-			w.WriteHeader(404)  // this should cause the post-creator to error out waiting forever for the repo-create to settle with 200 OK
+			w.WriteHeader(404) // this should cause the post-creator to error out waiting forever for the repo-create to settle with 200 OK
 			return
 		case "/service/local/repositories":
 			if r.Method != "POST" {
