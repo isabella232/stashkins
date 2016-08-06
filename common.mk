@@ -17,7 +17,6 @@ test: lint
 binaries: test 
 	GOOS=darwin GOARCH=$(ARCH) go build -ldflags $(LD_FLAGS) -o $(NAME)-darwin-$(ARCH)
 	GOOS=linux GOARCH=$(ARCH) go build -ldflags $(LD_FLAGS) -o $(NAME)-linux-$(ARCH)
-	GOOS=windows GOARCH=$(ARCH) go build -ldflags $(LD_FLAGS) -o $(NAME)-windows-$(ARCH).exe
 
 package: all
 	mkdir -p packaging

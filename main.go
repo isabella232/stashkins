@@ -1,17 +1,25 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os/signal"
+	"runtime"
+	"syscall"
 
 	"log"
 	"os"
 
 	"github.com/xoom/jenkins"
 
-	"github.com/xoom/stashkins/stashkins"
 	"strings"
+
+	"github.com/xoom/stashkins/stashkins"
 )
+
+const lockFile = "/var/lock/stashkins.lock"
 
 var (
 	stashBaseURL             = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
@@ -28,7 +36,7 @@ var (
 	managedBranchPrefixes    = flag.String("managed-branch-prefixes", "feature/", "Branch prefixes to manage.")
 	versionFlag              = flag.Bool("version", false, "Print build info from which stashkins was built")
 
-	Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
+	Log *log.Logger = log.New(os.Stdout, "stashkins ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	stashParams   stashkins.WebClientParams
 	jenkinsParams stashkins.WebClientParams
@@ -57,7 +65,46 @@ func main() {
 		os.Exit(0)
 	}
 
-	validateCommandLineArguments()
+	// Setup a lock file so consecutive runs do not overlap
+	if runtime.GOOS == "linux" {
+		// https://github.com/golang/go/issues/8456
+		lock, err := os.OpenFile(lockFile, os.O_CREATE|os.O_EXCL, 0666)
+		if err != nil {
+			Log.Println(err)
+			return
+		}
+		defer lock.Close()
+
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			sig := <-sigs
+			Log.Printf("received signal: %v\n", sig)
+			syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+			os.Remove(lockFile)
+			Log.Println("lockfile removed by signal handler")
+			os.Exit(1)
+		}()
+
+		err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err != nil {
+			Log.Println(err)
+			return
+		}
+		Log.Println("acquired lock")
+
+		defer func() {
+			syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
+			Log.Println("lock released")
+			os.Remove(lockFile)
+		}()
+	}
+
+	Log.Println("Stashkins __begin")
+
+	if err := validateCommandLineArguments(); err != nil {
+		return
+	}
 
 	branchOperations := stashkins.NewBranchOperations(*managedBranchPrefixes)
 
@@ -114,25 +161,25 @@ func main() {
 	Log.Println("Stashkins has finished (__finish).")
 }
 
-func validateCommandLineArguments() {
-
+func validateCommandLineArguments() error {
 	if *userName == "" || *password == "" {
-		Log.Fatalln("username and password are required")
+		return errors.New("username and password are required")
 	}
 
 	if *jobTemplateRepositoryURL == "" {
-		Log.Fatalln("template-repository-url is required")
+		return errors.New("template-repository-url is required")
 	}
 
 	if *mavenRepositoryGroupID == "" {
-		Log.Fatalln("maven-repo-repository-groupID is required")
+		return errors.New("maven-repo-repository-groupID is required")
 	}
 
 	if *mavenUsername == "" || *mavenPassword == "" || *mavenRepositoryGroupID == "" {
-		Log.Fatalln("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required")
+		return errors.New("maven-repo-username, maven-repo-password, and maven-repo-repository-groupID are required")
 	}
 
 	if *jenkinsJobsDirectory != "" && !strings.HasPrefix(*jenkinsJobsDirectory, "/") {
-		Log.Fatalf("jenkins-jobs-directory must be specified with an absolute path: %s\n", *jenkinsJobsDirectory)
+		return fmt.Errorf("jenkins-jobs-directory must be specified with an absolute path: %s\n", *jenkinsJobsDirectory)
 	}
+	return nil
 }
