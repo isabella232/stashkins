@@ -3,8 +3,8 @@ import:
 - package: github.com/ae6rt/retry
   version: v2.0.0
 - package: github.com/xoom/jenkins
-  version: 41d24051f4b8e8c064c6d3f8b27ec44f449ed6c5
+  version: v1.0.1
 - package: github.com/xoom/maventools
-  version: 1b594f4c32b81632448fa9ab128c0b5cbabdde98
+  version: v1.0.1
 - package: github.com/xoom/stash
-  version: e729551d5f168a1357eeb0308c8f2d0dfc0f236a
+  version: v1.0.1

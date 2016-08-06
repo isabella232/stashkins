@@ -1,5 +1,5 @@
-hash: 2341272cea0ccb29645cbcdb095145b8dbdc70eaf95117ea13ee20c16ce991d2
-updated: 2016-08-05T19:30:07.103513263-07:00
+hash: a5b9f02817d1ba562176a50b5a7254f4621f66b937633ccafa6fcdb5bc0b9eb1
+updated: 2016-08-06T06:10:22.966312335-07:00
 imports:
 - name: github.com/ae6rt/retry
   version: 1a40fd118c4c589e39abd065d7e94145c45133a6
@@ -8,5 +8,5 @@ imports:
 - name: github.com/xoom/maventools
   version: 1b594f4c32b81632448fa9ab128c0b5cbabdde98
 - name: github.com/xoom/stash
-  version: e729551d5f168a1357eeb0308c8f2d0dfc0f236a
+  version: f449fe3fa4ba690fb817c2a70d21588e69b3e076
 testImports: []
