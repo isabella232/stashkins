@@ -12,15 +12,12 @@ lint:
 	go vet ./...
 
 test: lint
-	godep go test -v ./...
+	go test -v ./...
 
-binaries: tools test 
-	GOOS=darwin GOARCH=$(ARCH) godep go build -ldflags $(LD_FLAGS) -o $(NAME)-darwin-$(ARCH)
-	GOOS=linux GOARCH=$(ARCH) godep go build -ldflags $(LD_FLAGS) -o $(NAME)-linux-$(ARCH)
-	GOOS=windows GOARCH=$(ARCH) godep go build -ldflags $(LD_FLAGS) -o $(NAME)-windows-$(ARCH).exe
-
-tools:
-	type godep > /dev/null 2>&1 || go get -v github.com/tools/godep
+binaries: test 
+	GOOS=darwin GOARCH=$(ARCH) go build -ldflags $(LD_FLAGS) -o $(NAME)-darwin-$(ARCH)
+	GOOS=linux GOARCH=$(ARCH) go build -ldflags $(LD_FLAGS) -o $(NAME)-linux-$(ARCH)
+	GOOS=windows GOARCH=$(ARCH) go build -ldflags $(LD_FLAGS) -o $(NAME)-windows-$(ARCH).exe
 
 package: all
 	mkdir -p packaging
@@ -32,3 +29,5 @@ clean:
 	go clean
 	rm -rf *.deb *.rpm packaging
 	rm -f $(NAME)-darwin-$(ARCH) $(NAME)-linux-$(ARCH) $(NAME)-windows-$(ARCH).exe
+
+.PHONY: lint test binaries package clean

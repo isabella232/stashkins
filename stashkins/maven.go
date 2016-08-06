@@ -94,14 +94,14 @@ func (maven MavenAspect) PostJobCreateTasks(newJobName, newJobDescription, gitRe
 }
 
 func (maven MavenAspect) waitForRepositoryToSettle(repositoryID maventools.RepositoryID) error {
-	retry := retry.New(16*time.Second, 5, func(attempts uint) {
+	retry := retry.New(4, func(attempts int) {
 		if attempts == 0 {
 			return
 		}
 		if attempts > 2 {
 			Log.Printf("%s: wait for repository-exists with-backoff try %d\n", postCreatorAgent, attempts+1)
 		}
-		time.Sleep((1 << attempts) * time.Second)
+		time.Sleep((1 << uint(attempts)) * time.Second)
 	})
 
 	// Sonatype says Nexus will perform asynchronous tasks on creating the repository after Nexus returns 201 Created above.  As a result, the repository
