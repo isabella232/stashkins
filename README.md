@@ -40,7 +40,12 @@ from Stash to determine stale or missing Jenkins jobs.
 Build
 =====
 
-     make
+Stashkins uses [glide](https://github.com/Masterminds/glide) to manage dependencies.
+
+```
+$ glide install
+$ make
+```
 
 which outputs binaries for Mac, Linux, Windows in the current working
 directory.
