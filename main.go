@@ -19,8 +19,6 @@ import (
 	"github.com/xoom/stashkins/stashkins"
 )
 
-const lockFile = "/var/lock/stashkins.lock"
-
 var (
 	stashBaseURL             = flag.String("stash-rest-base-url", "http://stash.example.com:8080", "Stash REST Base URL")
 	jenkinsBaseURL           = flag.String("jenkins-base-url", "http://jenkins.example.com:8080", "Jenkins Base URL")
@@ -68,41 +66,44 @@ func main() {
 	// Setup a lock file so consecutive runs do not overlap
 	if runtime.GOOS == "linux" {
 		// https://github.com/golang/go/issues/8456
-		lock, err := os.OpenFile(lockFile, os.O_CREATE|os.O_EXCL, 0666)
+		lock, err := os.OpenFile("/var/lock/stashkins.lock", os.O_CREATE|os.O_EXCL, 0666)
 		if err != nil {
 			Log.Println(err)
 			return
 		}
 		defer lock.Close()
 
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			sig := <-sigs
-			Log.Printf("received signal: %v\n", sig)
-			syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
-			os.Remove(lockFile)
-			Log.Println("lockfile removed by signal handler")
-			os.Exit(1)
-		}()
-
 		err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
 		if err != nil {
-			Log.Println(err)
+			Log.Printf("Error acquiring lock on %s: %v\n", lock.Name(), err)
 			return
 		}
-		Log.Println("acquired lock")
 
-		defer func() {
-			syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
-			Log.Println("lock released")
-			os.Remove(lockFile)
-		}()
+		go func(f *os.File) {
+			sigs := make(chan os.Signal, 1)
+			signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+			<-sigs
+			syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+			f.Close()
+			os.Remove(f.Name())
+			os.Exit(1)
+		}(lock)
+
+		defer func(f *os.File) {
+			if err := syscall.Flock(int(f.Fd()), syscall.LOCK_UN); err != nil {
+				Log.Printf("Error releasing lock on %s: %v\n", f.Name(), err)
+				return
+			}
+			if err := os.Remove(f.Name()); err != nil {
+				Log.Printf("Error removing lock file %s: %v\n", f.Name(), err)
+			}
+		}(lock)
 	}
 
 	Log.Println("Stashkins __begin")
 
 	if err := validateCommandLineArguments(); err != nil {
+		Log.Println(err)
 		return
 	}
 
