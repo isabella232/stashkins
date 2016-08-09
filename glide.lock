@@ -1,12 +1,12 @@
-hash: a5b9f02817d1ba562176a50b5a7254f4621f66b937633ccafa6fcdb5bc0b9eb1
-updated: 2016-08-06T06:10:22.966312335-07:00
+hash: 31e095f789bb13f0889ee98d71ba7a7af99f9ba25ff7f511b5ccb62784b95038
+updated: 2016-08-09T15:47:19.311852916-07:00
 imports:
 - name: github.com/ae6rt/retry
   version: 1a40fd118c4c589e39abd065d7e94145c45133a6
 - name: github.com/xoom/jenkins
-  version: 41d24051f4b8e8c064c6d3f8b27ec44f449ed6c5
+  version: db54adadddb928b05294f6e8ce81cae047dcb099
 - name: github.com/xoom/maventools
-  version: 1b594f4c32b81632448fa9ab128c0b5cbabdde98
+  version: 59f00b7919e04e1e2b35a54f3deb1d73a32920bd
 - name: github.com/xoom/stash
-  version: f449fe3fa4ba690fb817c2a70d21588e69b3e076
+  version: 91cf8da717f40f60935b0de7f9c80c7d1c1ae012
 testImports: []
