@@ -40,7 +40,16 @@ from Stash to determine stale or missing Jenkins jobs.
 Build
 =====
 
-     make
+Stashkins uses [glide](https://github.com/Masterminds/glide) to manage dependencies.
+
+The Makefile does a check to see if vendor/ exists.  If it does,
+it assumes glide install has been run.  It's up to you to make sure
+vendor/ is up to date before you go build.
+
+```
+$ glide install
+$ make
+```
 
 which outputs binaries for Mac, Linux, Windows in the current working
 directory.

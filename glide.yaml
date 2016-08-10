@@ -1,0 +1,10 @@
+package: github.com/xoom/stashkins
+import:
+- package: github.com/ae6rt/retry
+  version: v2.0.0
+- package: github.com/xoom/jenkins
+  version: v1.0.2
+- package: github.com/xoom/maventools
+  version: v1.0.2
+- package: github.com/xoom/stash
+  version: v1.0.2

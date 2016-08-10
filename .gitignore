@@ -5,3 +5,4 @@ stashkins-windows-amd64.exe
 *.rpm
 packaging/
 work/
+vendor/
